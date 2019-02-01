@@ -21,16 +21,32 @@ import (
 
 	"github.com/scionproto/scion/go/lib/common"
 	"github.com/scionproto/scion/go/lib/infra"
+	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/lib/util"
 )
 
 var _ infra.Transport = (*FilterTransport)(nil)
 
-//TODO(Annika): Adapt this description to fit filter transport
-//
+type filterHook func(addr *snet.Addr) (FilterResult, error)
+type FilterResult int
+
+const (
+	// FilterError means the current filter has encountered an error.
+	FilterError FilterResult = iota
+	// FilterAccept means the packet was accepted by this particular filter
+	// and should be handed to the next one.
+	FilterAccept
+	// FilterDrop means the current filter does not accept this packet,
+	// and it needs to be dropped.
+	FilterDrop
+)
+
 // FilterTransport implements interface Transport by wrapping around a
-// net.PacketConn. The reliability of the underlying net.PacketConn defines the
+// snet.Conn. The reliability of the underlying snet.Conn defines the
 // semantics behind SendMsgTo and SendUnreliableMsgTo.
+//
+//TODO: the following lines were copied from packet_transport.go. If the net.PacketConn behaves differently
+// from a snet.Conn, they need to be adapted.
 //
 // For PacketTransports running on top of UDP, both SendMsgTo and
 // SendUnreliableMsgTo are unreliable.
@@ -42,15 +58,17 @@ var _ infra.Transport = (*FilterTransport)(nil)
 // transfer. It is not a guarantee that the server has read and processed the
 // message.
 type FilterTransport struct {
-	conn net.PacketConn
+	conn snet.Conn
 	// While conn is safe for use from multiple goroutines, deadlines are
 	// global so it is not safe to enforce two at the same time. Thus, to
 	// meet context deadlines we serialize access to the conn.
 	writeLock *util.ChannelLock
 	readLock  *util.ChannelLock
+	//hook slice for filters that need to be applied to packets
+	filterHooks []filterHook
 }
 
-func NewPacketTransport(conn net.PacketConn) *FilterTransport {
+func NewFilterTransport(conn snet.Conn) *FilterTransport {
 	return &FilterTransport{
 		conn:      conn,
 		writeLock: util.NewChannelLock(),
@@ -84,6 +102,22 @@ func (u *FilterTransport) SendMsgTo(ctx context.Context, b common.RawBytes,
 }
 
 func (u *FilterTransport) RecvFrom(ctx context.Context) (common.RawBytes, net.Addr, error) {
+
+	n, addr, err := u.recvFrom(ctx)
+
+	for ; err == nil; n, addr, err = u.recvFrom(ctx) {
+
+		isAck, filterErr := u.filter(addr)
+
+		if filterErr != nil || isAck {
+			return n, addr, filterErr
+		}
+	}
+
+	return n, addr, err
+}
+
+func (u *FilterTransport) recvFrom(ctx context.Context) (common.RawBytes, *snet.Addr, error) {
 	select {
 	case <-u.readLock.Lock():
 		defer u.readLock.Unlock()
@@ -94,8 +128,25 @@ func (u *FilterTransport) RecvFrom(ctx context.Context) (common.RawBytes, net.Ad
 		return nil, nil, err
 	}
 	b := make(common.RawBytes, common.MaxMTU)
-	n, address, err := u.conn.ReadFrom(b)
+	n, address, err := u.conn.ReadFromSCION(b)
+
 	return b[:n], address, err
+}
+
+func (u *FilterTransport) filter(addr *snet.Addr) (bool, error) {
+
+	for _, f := range u.filterHooks {
+		result, err := f(addr)
+		switch result {
+		case FilterError:
+			return false, err
+		case FilterAccept:
+			continue
+		case FilterDrop:
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 func (u *FilterTransport) Close(context.Context) error {
