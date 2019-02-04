@@ -1,4 +1,4 @@
-// Copyright 2018 ETH Zurich
+// Copyright 2019 ETH Zurich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,20 +27,6 @@ import (
 
 var _ infra.Transport = (*FilterTransport)(nil)
 
-type filterHook func(addr *snet.Addr) (FilterResult, error)
-type FilterResult int
-
-const (
-	// FilterError means the current filter has encountered an error.
-	FilterError FilterResult = iota
-	// FilterAccept means the packet was accepted by this particular filter
-	// and should be handed to the next one.
-	FilterAccept
-	// FilterDrop means the current filter does not accept this packet,
-	// and it needs to be dropped.
-	FilterDrop
-)
-
 // FilterTransport implements interface Transport by wrapping around a
 // snet.Conn. The reliability of the underlying snet.Conn defines the
 // semantics behind SendMsgTo and SendUnreliableMsgTo.
@@ -65,15 +51,22 @@ type FilterTransport struct {
 	writeLock *util.ChannelLock
 	readLock  *util.ChannelLock
 	//hook slice for filters that need to be applied to packets
-	filterHooks []filterHook
+	addrFilters []*AddrFilter
 }
 
 func NewFilterTransport(conn snet.Conn) *FilterTransport {
 	return &FilterTransport{
-		conn:      conn,
-		writeLock: util.NewChannelLock(),
-		readLock:  util.NewChannelLock(),
+		conn:        conn,
+		writeLock:   util.NewChannelLock(),
+		readLock:    util.NewChannelLock(),
+		addrFilters: make([]*AddrFilter, 0),
 	}
+}
+
+func (u *FilterTransport) AddAddrFilter(addrFilter *AddrFilter) error {
+
+	u.addrFilters = append(u.addrFilters, addrFilter)
+	return nil
 }
 
 func (u *FilterTransport) SendUnreliableMsgTo(ctx context.Context, b common.RawBytes,
@@ -107,7 +100,7 @@ func (u *FilterTransport) RecvFrom(ctx context.Context) (common.RawBytes, net.Ad
 
 	for ; err == nil; n, addr, err = u.recvFrom(ctx) {
 
-		isAck, filterErr := u.filter(addr)
+		isAck, filterErr := u.filterOnAddr(addr)
 
 		if filterErr != nil || isAck {
 			return n, addr, filterErr
@@ -133,10 +126,10 @@ func (u *FilterTransport) recvFrom(ctx context.Context) (common.RawBytes, *snet.
 	return b[:n], address, err
 }
 
-func (u *FilterTransport) filter(addr *snet.Addr) (bool, error) {
+func (u *FilterTransport) filterOnAddr(addr *snet.Addr) (bool, error) {
 
-	for _, f := range u.filterHooks {
-		result, err := f(addr)
+	for _, f := range u.addrFilters {
+		result, err := (*f).FilterAddr(addr)
 		switch result {
 		case FilterError:
 			return false, err
