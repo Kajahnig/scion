@@ -63,10 +63,9 @@ func NewFilterTransport(conn snet.Conn) *FilterTransport {
 	}
 }
 
-func (u *FilterTransport) AddAddrFilter(addrFilter *AddrFilter) error {
+func (u *FilterTransport) AddAddrFilter(addrFilter *AddrFilter) {
 
 	u.addrFilters = append(u.addrFilters, addrFilter)
-	return nil
 }
 
 func (u *FilterTransport) SendUnreliableMsgTo(ctx context.Context, b common.RawBytes,

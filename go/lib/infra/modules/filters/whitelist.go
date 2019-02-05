@@ -16,6 +16,7 @@ package filters
 
 import (
 	"github.com/scionproto/scion/go/lib/addr"
+	"github.com/scionproto/scion/go/lib/common"
 	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/lib/topology"
 	"github.com/scionproto/scion/go/proto"
@@ -60,8 +61,8 @@ type WhitelistFilter struct {
 	lastScan time.Time
 
 	localIA           addr.IA
-	neighbouringNodes []addr.IA
-	localInfraNodes   []addr.IA
+	neighbouringNodes map[addr.IA]string
+	localInfraNodes   map[addr.IA]string //TODO: change the type to suitable address
 
 	OutsideWLSetting
 	LocalWLSetting
@@ -105,7 +106,8 @@ func (f *WhitelistFilter) FilterAddr(addr *snet.Addr) (FilterResult, error) {
 		case WLLocalInfraNodes:
 			//TODO: check if addr is contained in local infra nodes
 		default:
-			//TODO: return an error because the LocalWLSetting has an illegal value
+			return FilterError, common.NewBasicError("The local WL Setting has an illegal value",
+				nil, "filterSetting", f.LocalWLSetting)
 		}
 	}
 
@@ -118,11 +120,16 @@ func (f *WhitelistFilter) FilterAddr(addr *snet.Addr) (FilterResult, error) {
 			return FilterAccept, nil
 		}
 		return FilterDrop, nil
+	case WLAllNeighbours, WLUpAndDownNeighbours, WLCoreNeighbours:
+		_, isPresent := f.neighbouringNodes[addr.IA]
+		if isPresent {
+			return FilterAccept, nil
+		}
+		return FilterDrop, nil
 	default:
-		//TODO: check if neighbouring slice contains addr.IA
+		return FilterError, common.NewBasicError("The outside WL Setting has an illegal value",
+			nil, "filterSetting", f.OutsideWLSetting)
 	}
-
-	return FilterAccept, nil
 }
 
 func (f *WhitelistFilter) rescanTopoFile() error {
@@ -135,24 +142,24 @@ func (f *WhitelistFilter) rescanTopoFile() error {
 	switch f.OutsideWLSetting {
 	case WLAllNeighbours:
 		for _, interf := range topo.IFInfoMap {
-			f.neighbouringNodes = append(f.neighbouringNodes, interf.ISD_AS)
+			f.neighbouringNodes[interf.ISD_AS] = ""
 		}
 	case WLUpAndDownNeighbours:
 		for _, interf := range topo.IFInfoMap {
 			if interf.LinkType == proto.LinkType_child || interf.LinkType == proto.LinkType_parent {
-				f.neighbouringNodes = append(f.neighbouringNodes, interf.ISD_AS)
+				f.neighbouringNodes[interf.ISD_AS] = ""
 			}
 		}
 	case WLCoreNeighbours:
 		for _, interf := range topo.IFInfoMap {
 			if interf.LinkType == proto.LinkType_core {
-				f.neighbouringNodes = append(f.neighbouringNodes, interf.ISD_AS)
+				f.neighbouringNodes[interf.ISD_AS] = ""
 			}
 		}
 	}
 
 	if f.LocalWLSetting == WLLocalInfraNodes {
-		//TODO: add local infrastructure node addresses to slice
+		//TODO: add local infrastructure node addresses to map
 		//for every service: pub, bind, overlay?
 	}
 
