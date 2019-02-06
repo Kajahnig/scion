@@ -60,7 +60,8 @@ type WhitelistFilter struct {
 	//last time the topology file was scanned
 	lastScan time.Time
 
-	localIA           addr.IA
+	localIA addr.IA
+	//TODO: add concurrency control for adapting the maps!!!!
 	neighbouringNodes map[addr.IA]string
 	localInfraNodes   map[addr.IA]string //TODO: change the type to suitable address
 
@@ -79,11 +80,13 @@ func NewWhitelistFilter(pathToTopoFile string, rescanInterval float64,
 	}
 
 	return &WhitelistFilter{
-		pathToTopoFile:   pathToTopoFile,
-		rescanInterval:   rescanInterval,
-		localIA:          localIA,
-		OutsideWLSetting: outsideWLSetting,
-		LocalWLSetting:   localWLSetting,
+		pathToTopoFile:    pathToTopoFile,
+		rescanInterval:    rescanInterval,
+		localIA:           localIA,
+		neighbouringNodes: map[addr.IA]string{},
+		localInfraNodes:   map[addr.IA]string{},
+		OutsideWLSetting:  outsideWLSetting,
+		LocalWLSetting:    localWLSetting,
 	}, err
 }
 
@@ -139,6 +142,8 @@ func (f *WhitelistFilter) rescanTopoFile() error {
 		return err
 	}
 
+	f.neighbouringNodes = map[addr.IA]string{}
+
 	switch f.OutsideWLSetting {
 	case WLAllNeighbours:
 		for _, interf := range topo.IFInfoMap {
@@ -157,6 +162,8 @@ func (f *WhitelistFilter) rescanTopoFile() error {
 			}
 		}
 	}
+
+	f.localInfraNodes = map[addr.IA]string{}
 
 	if f.LocalWLSetting == WLLocalInfraNodes {
 		//TODO: add local infrastructure node addresses to map
