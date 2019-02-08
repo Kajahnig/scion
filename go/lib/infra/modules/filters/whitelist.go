@@ -15,12 +15,15 @@
 package filters
 
 import (
+	"github.com/scionproto/scion/go/lib/log"
+	"sync"
+	"time"
+
 	"github.com/scionproto/scion/go/lib/addr"
 	"github.com/scionproto/scion/go/lib/common"
 	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/lib/topology"
 	"github.com/scionproto/scion/go/proto"
-	"time"
 )
 
 type OutsideWLSetting int
@@ -28,16 +31,16 @@ type LocalWLSetting int
 
 const (
 	//Settings for Filtering requests from outside the local AS
+	//Drop All requests from outside of the local AS
+	NoOutsideWL OutsideWLSetting = iota
 	// Whitelist all requests form the local ISD
-	WLISD OutsideWLSetting = iota
+	WLISD
 	// Whitelist only the requests from neighbouring ASes
 	WLAllNeighbours
 	// Whitelist only the requests from neighbouring up- or downstream ASes
 	WLUpAndDownNeighbours
 	//Whitelists only core neighbours
 	WLCoreNeighbours
-	//Drop All requests from outside of the local AS
-	NoOutsideWL
 )
 
 const (
@@ -59,11 +62,17 @@ type WhitelistFilter struct {
 	rescanInterval float64
 	//last time the topology file was scanned
 	lastScan time.Time
+	localIA  addr.IA
 
-	localIA addr.IA
-	//TODO: add concurrency control for adapting the maps!!!!
+	//map of whitelisted neighbouring nodes
 	neighbouringNodes map[addr.IA]string
-	localInfraNodes   map[addr.IA]string //TODO: change the type to suitable address
+	//map of whitelisted infrastructure nodes
+	localInfraNodes map[string]string
+
+	//read write lock to lock neighbouring nodes list while it gets updated by rescanTopoFile
+	neighboursListLock sync.RWMutex
+	//read write lock to lock infrastructure nodes list while it gets updated by rescanTopoFile
+	infraNodeListLock sync.RWMutex
 
 	OutsideWLSetting
 	LocalWLSetting
@@ -84,54 +93,36 @@ func NewWhitelistFilter(pathToTopoFile string, rescanInterval float64,
 		rescanInterval:    rescanInterval,
 		localIA:           localIA,
 		neighbouringNodes: map[addr.IA]string{},
-		localInfraNodes:   map[addr.IA]string{},
+		localInfraNodes:   map[string]string{},
 		OutsideWLSetting:  outsideWLSetting,
 		LocalWLSetting:    localWLSetting,
 	}, err
 }
 
+func getTopo(pathToTopoFile string) (*topology.Topo, error) {
+	return topology.LoadFromFile(pathToTopoFile)
+}
+
 func (f *WhitelistFilter) FilterAddr(addr *snet.Addr) (FilterResult, error) {
 
-	if time.Since(f.lastScan).Seconds() > f.rescanInterval {
-		err := f.rescanTopoFile()
-		if err != nil {
-			return FilterError, err
-		}
-	}
+	f.rescanTopoFileIfNecessary()
 
 	if addr.IA == f.localIA {
-		//request is from local AS, apply local rules
-		switch f.LocalWLSetting {
-		case WLLocalAS:
-			return FilterAccept, nil
-		case NoLocalWL:
-			return FilterDrop, nil
-		case WLLocalInfraNodes:
-			//TODO: check if addr is contained in local infra nodes
-		default:
-			return FilterError, common.NewBasicError("The local WL Setting has an illegal value",
-				nil, "filterSetting", f.LocalWLSetting)
-		}
+		return f.filterLocalAddr(addr)
+	} else {
+		return f.filterRemoteAddr(addr)
 	}
+}
 
-	//apparently the address is not from the local AS, so judge on outside rules:
-	switch f.OutsideWLSetting {
-	case NoOutsideWL:
-		return FilterDrop, nil
-	case WLISD:
-		if addr.IA.I == f.localIA.I {
-			return FilterAccept, nil
+func (f *WhitelistFilter) rescanTopoFileIfNecessary() {
+	if f.OutsideWLSetting > 1 || f.LocalWLSetting == WLLocalInfraNodes {
+		if time.Since(f.lastScan).Seconds() > f.rescanInterval {
+			err := f.rescanTopoFile()
+			if err != nil {
+				log.Error("Whitelisting filter failed to rescan topology file",
+					"path", f.pathToTopoFile, "err", err)
+			}
 		}
-		return FilterDrop, nil
-	case WLAllNeighbours, WLUpAndDownNeighbours, WLCoreNeighbours:
-		_, isPresent := f.neighbouringNodes[addr.IA]
-		if isPresent {
-			return FilterAccept, nil
-		}
-		return FilterDrop, nil
-	default:
-		return FilterError, common.NewBasicError("The outside WL Setting has an illegal value",
-			nil, "filterSetting", f.OutsideWLSetting)
 	}
 }
 
@@ -141,6 +132,21 @@ func (f *WhitelistFilter) rescanTopoFile() error {
 	if err != nil {
 		return err
 	}
+
+	f.lastScan = time.Now()
+
+	f.fillNeighboursMap(topo)
+
+	if f.LocalWLSetting == WLLocalInfraNodes {
+		f.fillInfraNodesMap(topo)
+	}
+
+	return nil
+}
+
+func (f *WhitelistFilter) fillNeighboursMap(topo *topology.Topo) {
+	f.neighboursListLock.Lock()
+	defer f.neighboursListLock.Unlock()
 
 	f.neighbouringNodes = map[addr.IA]string{}
 
@@ -162,17 +168,83 @@ func (f *WhitelistFilter) rescanTopoFile() error {
 			}
 		}
 	}
-
-	f.localInfraNodes = map[addr.IA]string{}
-
-	if f.LocalWLSetting == WLLocalInfraNodes {
-		//TODO: add local infrastructure node addresses to map
-		//for every service: pub, bind, overlay?
-	}
-
-	return nil
 }
 
-func getTopo(pathToTopoFile string) (*topology.Topo, error) {
-	return topology.LoadFromFile(pathToTopoFile)
+func (f *WhitelistFilter) fillInfraNodesMap(topo *topology.Topo) {
+	f.infraNodeListLock.Lock()
+	defer f.infraNodeListLock.Unlock()
+
+	f.localInfraNodes = map[string]string{}
+
+	for _, idAddrMap := range []topology.IDAddrMap{topo.DS, topo.BS, topo.CS, topo.PS, topo.SB, topo.RS, topo.SIG} {
+		for _, topoAddr := range idAddrMap {
+			if topoAddr.Overlay.IsIPv4() {
+				f.localInfraNodes[topoAddr.IPv4.PublicAddr().L3.String()] = ""
+			}
+			if topoAddr.Overlay.IsIPv6() {
+				f.localInfraNodes[topoAddr.IPv6.PublicAddr().L3.String()] = ""
+			}
+		}
+	}
+	for _, topoAddr := range topo.BR {
+		if topoAddr.InternalAddrs.Overlay.IsIPv4() {
+			f.localInfraNodes[topoAddr.InternalAddrs.IPv4.PublicOverlay.L3().String()] = ""
+		}
+		if topoAddr.InternalAddrs.Overlay.IsIPv6() {
+			f.localInfraNodes[topoAddr.InternalAddrs.IPv6.PublicOverlay.L3().String()] = ""
+		}
+	}
+}
+
+func (f *WhitelistFilter) filterLocalAddr(addr *snet.Addr) (FilterResult, error) {
+
+	switch f.LocalWLSetting {
+	case WLLocalAS:
+		return FilterAccept, nil
+	case NoLocalWL:
+		return FilterDrop, nil
+	case WLLocalInfraNodes:
+		return f.filterDependingOnInfraNodeWL(addr)
+	default:
+		return FilterError, common.NewBasicError("The local WL Setting has an illegal value",
+			nil, "filterSetting", f.LocalWLSetting)
+	}
+}
+
+func (f *WhitelistFilter) filterDependingOnInfraNodeWL(addr *snet.Addr) (FilterResult, error) {
+	f.infraNodeListLock.RLock()
+	defer f.infraNodeListLock.RUnlock()
+
+	if _, isPresent := f.localInfraNodes[addr.Host.L3.String()]; isPresent {
+		return FilterAccept, nil
+	}
+	return FilterDrop, nil
+}
+
+func (f *WhitelistFilter) filterRemoteAddr(addr *snet.Addr) (FilterResult, error) {
+
+	switch f.OutsideWLSetting {
+	case NoOutsideWL:
+		return FilterDrop, nil
+	case WLISD:
+		if addr.IA.I == f.localIA.I {
+			return FilterAccept, nil
+		}
+		return FilterDrop, nil
+	case WLAllNeighbours, WLUpAndDownNeighbours, WLCoreNeighbours:
+		return f.filterDependingOnNeighboursWL(addr)
+	default:
+		return FilterError, common.NewBasicError("The outside WL Setting has an illegal value",
+			nil, "filterSetting", f.OutsideWLSetting)
+	}
+}
+
+func (f *WhitelistFilter) filterDependingOnNeighboursWL(addr *snet.Addr) (FilterResult, error) {
+	f.neighboursListLock.RLock()
+	defer f.neighboursListLock.RUnlock()
+
+	if _, isPresent := f.neighbouringNodes[addr.IA]; isPresent {
+		return FilterAccept, nil
+	}
+	return FilterDrop, nil
 }
