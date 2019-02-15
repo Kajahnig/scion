@@ -14,12 +14,20 @@
 
 package filters
 
-import "github.com/scionproto/scion/go/lib/snet"
+import (
+	"github.com/scionproto/scion/go/lib/scmp"
+	"github.com/scionproto/scion/go/lib/snet"
+)
 
 type FilterResult int
 
 type AddrFilter interface {
 	FilterAddr(addr *snet.Addr) (FilterResult, error)
+}
+
+type PacketFilter interface {
+	FilterPacket(pkt *snet.SCIONPacket) (FilterResult, error)
+	SCMPError() scmp.ClassType
 }
 
 const (

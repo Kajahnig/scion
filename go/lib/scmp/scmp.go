@@ -29,9 +29,10 @@ const (
 	C_Path
 	C_Ext
 	C_Sibra
+	C_Filtering
 )
 
-var classNames = []string{"GENERAL", "ROUTING", "CMNHDR", "PATH", "EXT", "SIBRA"}
+var classNames = []string{"GENERAL", "ROUTING", "CMNHDR", "PATH", "EXT", "SIBRA", "FILTERING"}
 
 func (c Class) String() string {
 	if int(c) > len(classNames) {
@@ -102,6 +103,16 @@ const (
 const (
 	T_S_BadVersion Type = iota
 	T_S_SetupNoReq
+)
+
+// C_Filtering types
+const (
+	T_F_NotOnWhitelist Type = iota
+	T_F_PathTooLong
+	T_F_ASRateLimitReached
+	T_F_HBRateLimitReached
+	T_F_DuplicateSuppression
+	T_F_NoDRKeySourceAuth
 )
 
 var typeNameMap = map[Class][]string{
