@@ -71,6 +71,7 @@ func (c *FilteringRawSCIONConn) filter(pkt *snet.SCIONPacket) (bool, error) {
 		result, err := (*f).FilterPacket(pkt)
 		switch result {
 		case FilterError:
+			//TODO: maybe also return an SCMP with special type here?
 			return false, err
 		case FilterAccept:
 			continue

@@ -108,7 +108,7 @@ const (
 // C_Filtering types
 const (
 	T_F_NotOnWhitelist Type = iota
-	T_F_PathTooLong
+	T_F_PathLengthNotValid
 	T_F_ASRateLimitReached
 	T_F_HBRateLimitReached
 	T_F_DuplicateSuppression
