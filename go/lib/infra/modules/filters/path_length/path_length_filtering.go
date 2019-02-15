@@ -15,6 +15,7 @@
 package path_length
 
 import (
+	"github.com/scionproto/scion/go/lib/common"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters"
 	"github.com/scionproto/scion/go/lib/scmp"
 	"github.com/scionproto/scion/go/lib/snet"
@@ -23,7 +24,7 @@ import (
 
 var SCMPClassType = scmp.ClassType{
 	Class: scmp.C_Filtering,
-	Type:  scmp.T_F_PathLengthNotValid,
+	Type:  scmp.T_F_PathLengthNotAccepted,
 }
 
 var _ filters.PacketFilter = (*PathLengthFilter)(nil)
@@ -33,14 +34,29 @@ type PathLengthFilter struct {
 	minPathLength int
 }
 
-func NewPathLengthFilter(maxLength int, minLength int) (*PathLengthFilter, error) {
+func NewPathLengthFilter(minLength int, maxLength int) (*PathLengthFilter, error) {
 
-	//TODO: need to do something to ensure path length is not negative?
+	min := 0
+	max := 0
+
+	if minLength >= 1 {
+		min = minLength
+	}
+
+	if maxLength >= 1 {
+		max = maxLength
+	}
+
+	var err error = nil
+	if min > max {
+		err = common.NewBasicError("Unable to create path length filter with bigger min than max",
+			nil, "maxlength", maxLength, "minlength", minLength)
+	}
 
 	return &PathLengthFilter{
-		maxPathLength: maxLength,
-		minPathLength: minLength,
-	}, nil
+		maxPathLength: max,
+		minPathLength: min,
+	}, err
 }
 
 func (f *PathLengthFilter) SCMPError() scmp.ClassType {
@@ -68,7 +84,24 @@ func (f *PathLengthFilter) determinePathLength(path *spath.Path) (int, error) {
 		return 0, nil
 	}
 
-	//TODO: count the number of path
+	var offset = 0
+	var pathLength int = 0
 
-	return 0, nil
+	for i := 0; i < 3; i++ {
+		infoField, err := spath.InfoFFromRaw(path.Raw[offset:])
+		if err != nil {
+			return -1, err
+		}
+		offset += spath.InfoFieldLength + int(infoField.Hops)*spath.HopFieldLength
+		pathLength += int(infoField.Hops)
+
+		if offset == len(path.Raw) {
+			break
+		} else if offset > len(path.Raw) {
+			return -1, common.NewBasicError("Unable to determine length of corrupt path", nil,
+				"currOff", offset, "max", len(path.Raw))
+		}
+	}
+
+	return pathLength, nil
 }
