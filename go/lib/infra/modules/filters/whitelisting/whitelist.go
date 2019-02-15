@@ -12,19 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package filters
+package whitelisting
 
 import (
-	"github.com/scionproto/scion/go/lib/log"
 	"sync"
 	"time"
 
 	"github.com/scionproto/scion/go/lib/addr"
 	"github.com/scionproto/scion/go/lib/common"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters"
+	"github.com/scionproto/scion/go/lib/log"
+	"github.com/scionproto/scion/go/lib/scmp"
 	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/lib/topology"
 	"github.com/scionproto/scion/go/proto"
 )
+
+var SCMPClassType = scmp.ClassType{
+	Class: scmp.C_Filtering,
+	Type:  scmp.T_F_NotOnWhitelist,
+}
 
 type OutsideWLSetting int
 type LocalWLSetting int
@@ -53,7 +60,7 @@ const (
 	NoLocalWL
 )
 
-var _ AddrFilter = (*WhitelistFilter)(nil)
+var _ filters.PacketFilter = (*WhitelistFilter)(nil)
 
 type WhitelistFilter struct {
 	//contains the path to the topology file used to get identifiers of neighbouring ASes
@@ -103,9 +110,15 @@ func getTopo(pathToTopoFile string) (*topology.Topo, error) {
 	return topology.LoadFromFile(pathToTopoFile)
 }
 
-func (f *WhitelistFilter) FilterAddr(addr *snet.Addr) (FilterResult, error) {
+func (f *WhitelistFilter) SCMPError() scmp.ClassType {
+	return SCMPClassType
+}
+
+func (f *WhitelistFilter) FilterPacket(pkt *snet.SCIONPacket) (filters.FilterResult, error) {
 
 	f.rescanTopoFileIfNecessary()
+
+	addr := pkt.Source
 
 	if addr.IA == f.localIA {
 		return f.filterLocalAddr(addr)
@@ -196,55 +209,55 @@ func (f *WhitelistFilter) fillInfraNodesMap(topo *topology.Topo) {
 	}
 }
 
-func (f *WhitelistFilter) filterLocalAddr(addr *snet.Addr) (FilterResult, error) {
+func (f *WhitelistFilter) filterLocalAddr(addr snet.SCIONAddress) (filters.FilterResult, error) {
 
 	switch f.LocalWLSetting {
 	case WLLocalAS:
-		return FilterAccept, nil
+		return filters.FilterAccept, nil
 	case NoLocalWL:
-		return FilterDrop, nil
+		return filters.FilterDrop, nil
 	case WLLocalInfraNodes:
 		return f.filterDependingOnInfraNodeWL(addr)
 	default:
-		return FilterError, common.NewBasicError("The local WL Setting has an illegal value",
+		return filters.FilterError, common.NewBasicError("The local WL Setting has an illegal value",
 			nil, "filterSetting", f.LocalWLSetting)
 	}
 }
 
-func (f *WhitelistFilter) filterDependingOnInfraNodeWL(addr *snet.Addr) (FilterResult, error) {
+func (f *WhitelistFilter) filterDependingOnInfraNodeWL(addr snet.SCIONAddress) (filters.FilterResult, error) {
 	f.infraNodeListLock.RLock()
 	defer f.infraNodeListLock.RUnlock()
 
-	if _, isPresent := f.localInfraNodes[addr.Host.L3.String()]; isPresent {
-		return FilterAccept, nil
+	if _, isPresent := f.localInfraNodes[addr.Host.IP().String()]; isPresent {
+		return filters.FilterAccept, nil
 	}
-	return FilterDrop, nil
+	return filters.FilterDrop, nil
 }
 
-func (f *WhitelistFilter) filterRemoteAddr(addr *snet.Addr) (FilterResult, error) {
+func (f *WhitelistFilter) filterRemoteAddr(addr snet.SCIONAddress) (filters.FilterResult, error) {
 
 	switch f.OutsideWLSetting {
 	case NoOutsideWL:
-		return FilterDrop, nil
+		return filters.FilterDrop, nil
 	case WLISD:
 		if addr.IA.I == f.localIA.I {
-			return FilterAccept, nil
+			return filters.FilterAccept, nil
 		}
-		return FilterDrop, nil
+		return filters.FilterDrop, nil
 	case WLAllNeighbours, WLUpAndDownNeighbours, WLCoreNeighbours:
 		return f.filterDependingOnNeighboursWL(addr)
 	default:
-		return FilterError, common.NewBasicError("The outside WL Setting has an illegal value",
+		return filters.FilterError, common.NewBasicError("The outside WL Setting has an illegal value",
 			nil, "filterSetting", f.OutsideWLSetting)
 	}
 }
 
-func (f *WhitelistFilter) filterDependingOnNeighboursWL(addr *snet.Addr) (FilterResult, error) {
+func (f *WhitelistFilter) filterDependingOnNeighboursWL(addr snet.SCIONAddress) (filters.FilterResult, error) {
 	f.neighboursListLock.RLock()
 	defer f.neighboursListLock.RUnlock()
 
 	if _, isPresent := f.neighbouringNodes[addr.IA]; isPresent {
-		return FilterAccept, nil
+		return filters.FilterAccept, nil
 	}
-	return FilterDrop, nil
+	return filters.FilterDrop, nil
 }

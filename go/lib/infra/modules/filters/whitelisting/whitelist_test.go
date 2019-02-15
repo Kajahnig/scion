@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package filters
+package whitelisting
 
 import (
 	"fmt"
@@ -22,6 +22,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 
 	"github.com/scionproto/scion/go/lib/addr"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters"
 	"github.com/scionproto/scion/go/lib/snet"
 )
 
@@ -37,13 +38,22 @@ var (
 	oldParent215, _ = addr.IAFromString("2-ff00:0:215")
 	oldCore233, _   = addr.IAFromString("2-ff00:0:233")
 
-	pathToFile                    = "./test_topology.json"
-	localAddr, _                  = snet.AddrFromString("2-ff00:0:211,[127.0.0.250]:1234")
-	localInfraNodeAddr, _         = snet.AddrFromString("2-ff00:0:211,[127.0.0.209]:1234")
-	localISDNeighbourAddr, _      = snet.AddrFromString("2-ff00:0:221,[127.0.0.250]:1234")
-	localISDButNoNeighbourAddr, _ = snet.AddrFromString("2-ff00:0:201,[127.0.0.250]:1234")
-	remoteISDAddr, _              = snet.AddrFromString("1-ff00:0:211,[127.0.0.250]:1234")
-	remoteISDButNeighbourAddr, _  = snet.AddrFromString("1-ff00:0:111,[127.0.0.250]:1234")
+	nonNeighbourFromLocalISD, _  = addr.IAFromString("2-ff00:0:201")
+	nonNeighbourFromRemoteISD, _ = addr.IAFromString("1-ff00:0:100")
+
+	localIA, _ = addr.IAFromString("2-ff00:0:211")
+
+	anyHostAddr   = addr.HostFromIPStr("127.0.0.250")
+	infraHostAddr = addr.HostFromIPStr("127.0.0.209")
+
+	pathToFile = "./test_topology.json"
+
+	localScionAddr             = snet.SCIONAddress{IA: localIA, Host: anyHostAddr}
+	localInfraNodeScionAddr    = snet.SCIONAddress{IA: localIA, Host: infraHostAddr}
+	localISDNeighbourAddr      = snet.SCIONAddress{IA: peer221, Host: anyHostAddr}
+	localISDButNoNeighbourAddr = snet.SCIONAddress{IA: nonNeighbourFromLocalISD, Host: anyHostAddr}
+	remoteISDAddr              = snet.SCIONAddress{IA: nonNeighbourFromRemoteISD, Host: anyHostAddr}
+	remoteISDButNeighbourAddr  = snet.SCIONAddress{IA: peer111, Host: anyHostAddr}
 
 	scannedNeighbours          = map[addr.IA]string{peer221: "", peer111: "", child212: "", child222: "", parent210: ""}
 	scannedUpAndDownNeighbours = map[addr.IA]string{child212: "", child222: "", parent210: ""}
@@ -67,7 +77,7 @@ func Test_NewWhitelistFilter(t *testing.T) {
 		})
 
 		Convey("Should set the local IA address of the filter", func() {
-			So(filter.localIA, ShouldResemble, localAddr.IA)
+			So(filter.localIA, ShouldResemble, localIA)
 		})
 
 		Convey("Should not fill any maps of the filter", func() {
@@ -209,7 +219,7 @@ func Test_rescanTopoFileIfNecessary(t *testing.T) {
 			pathToTopoFile:    pathToFile,
 			rescanInterval:    360,
 			lastScan:          time.Now().Add(-time.Second * 361),
-			localIA:           localAddr.IA,
+			localIA:           localIA,
 			neighbouringNodes: oldNeighbours,
 			localInfraNodes:   emptyInfraNodesMap,
 			OutsideWLSetting:  WLAllNeighbours,
@@ -242,7 +252,7 @@ func Test_rescanTopoFileIfNecessary(t *testing.T) {
 			pathToTopoFile:    "invalidPath",
 			rescanInterval:    360,
 			lastScan:          time.Now().Add(-time.Second * 361),
-			localIA:           localAddr.IA,
+			localIA:           localIA,
 			neighbouringNodes: oldNeighbours,
 			localInfraNodes:   emptyInfraNodesMap,
 			OutsideWLSetting:  WLAllNeighbours,
@@ -276,7 +286,7 @@ func Test_rescanTopoFileIfNecessary(t *testing.T) {
 			pathToTopoFile:    pathToFile,
 			rescanInterval:    360,
 			lastScan:          time.Now(),
-			localIA:           localAddr.IA,
+			localIA:           localIA,
 			neighbouringNodes: oldNeighbours,
 			localInfraNodes:   emptyInfraNodesMap,
 			OutsideWLSetting:  WLAllNeighbours,
@@ -309,22 +319,22 @@ func Test_rescanTopoFileIfNecessary(t *testing.T) {
 func Test_filterDependingOnInfraNodeWL(t *testing.T) {
 
 	tests := []struct {
-		localAddress *snet.Addr
+		localAddress snet.SCIONAddress
 		addressName  string
-		result       FilterResult
+		result       filters.FilterResult
 		resultName   string
 	}{
-		{localInfraNodeAddr, "an infrastructure",
-			FilterAccept, "Ack of the packet"},
-		{localAddr, "a non-infrastructure",
-			FilterDrop, "Drop of the packet"},
+		{localInfraNodeScionAddr, "an infrastructure",
+			filters.FilterAccept, "Ack of the packet"},
+		{localScionAddr, "a non-infrastructure",
+			filters.FilterDrop, "Drop of the packet"},
 	}
 
 	filter := &WhitelistFilter{
 		pathToTopoFile:    pathToFile,
 		rescanInterval:    360,
 		lastScan:          time.Now(),
-		localIA:           localAddr.IA,
+		localIA:           localIA,
 		neighbouringNodes: oldNeighbours,
 		localInfraNodes:   scannedInfraNodes,
 		OutsideWLSetting:  NoOutsideWL,
@@ -352,33 +362,33 @@ func Test_FilterAddr(t *testing.T) {
 		tests := []struct {
 			localSettings   LocalWLSetting
 			settingsName    string
-			result          FilterResult
+			result          filters.FilterResult
 			resultName      string
 			isError         bool
 			infraNodesMap   map[string]string
-			addressToFilter *snet.Addr
+			addressToFilter snet.SCIONAddress
 			addressName     string
 		}{
 			{WLLocalAS, "WLLocalAS",
-				FilterAccept, "Ack of the packet",
+				filters.FilterAccept, "Ack of the packet",
 				false, emptyInfraNodesMap,
-				localAddr, "a non-infrastructure"},
+				localScionAddr, "a non-infrastructure"},
 			{NoLocalWL, "NoLocalWL",
-				FilterDrop, "Drop of the packet",
+				filters.FilterDrop, "Drop of the packet",
 				false, emptyInfraNodesMap,
-				localInfraNodeAddr, "an infrastructure"},
+				localInfraNodeScionAddr, "an infrastructure"},
 			{WLLocalInfraNodes, "WLLocalInfraNodes",
-				FilterAccept, "Ack of the packet",
+				filters.FilterAccept, "Ack of the packet",
 				false, scannedInfraNodes,
-				localInfraNodeAddr, "an infrastructure"},
+				localInfraNodeScionAddr, "an infrastructure"},
 			{WLLocalInfraNodes, "WLLocalInfraNodes",
-				FilterDrop, "Drop of the packet",
+				filters.FilterDrop, "Drop of the packet",
 				false, scannedInfraNodes,
-				localAddr, "a non-infrastructure"},
+				localScionAddr, "a non-infrastructure"},
 			{LocalWLSetting(5), "an invalid Setting",
-				FilterError, "a Filtering error",
+				filters.FilterError, "a Filtering error",
 				true, emptyInfraNodesMap,
-				localInfraNodeAddr, "an infrastructure"},
+				localInfraNodeScionAddr, "an infrastructure"},
 		}
 
 		for _, test := range tests {
@@ -389,14 +399,20 @@ func Test_FilterAddr(t *testing.T) {
 					pathToTopoFile:    pathToFile,
 					rescanInterval:    360,
 					lastScan:          time.Now(),
-					localIA:           localAddr.IA,
+					localIA:           localIA,
 					neighbouringNodes: oldNeighbours,
 					localInfraNodes:   test.infraNodesMap,
 					OutsideWLSetting:  NoOutsideWL,
 					LocalWLSetting:    test.localSettings,
 				}
 
-				result, err := filter.FilterAddr(test.addressToFilter)
+				result, err := filter.FilterPacket(
+					&snet.SCIONPacket{
+						Bytes: nil,
+						SCIONPacketInfo: snet.SCIONPacketInfo{
+							Source: test.addressToFilter,
+						},
+					})
 
 				Convey(fmt.Sprintf("Should result in %v", test.resultName), func() {
 					So(result, ShouldResemble, test.result)
@@ -415,29 +431,29 @@ func Test_FilterAddr(t *testing.T) {
 		tests := []struct {
 			outsideSettings OutsideWLSetting
 			settingsName    string
-			result          FilterResult
+			result          filters.FilterResult
 			resultName      string
 			isError         bool
-			addressToFilter *snet.Addr
+			addressToFilter snet.SCIONAddress
 			addressName     string
 		}{
 			{NoOutsideWL, "NoOutsideWL",
-				FilterDrop, "drop of the packet",
+				filters.FilterDrop, "drop of the packet",
 				false, localISDNeighbourAddr, "the local ISD"},
 			{WLISD, "WLISD",
-				FilterAccept, "ack of the packet",
+				filters.FilterAccept, "ack of the packet",
 				false, localISDButNoNeighbourAddr, "the local ISD"},
 			{WLISD, "WLISD",
-				FilterDrop, "drop of the packet",
+				filters.FilterDrop, "drop of the packet",
 				false, remoteISDAddr, "a remote ISD"},
 			{WLAllNeighbours, "WLAllNeighbours",
-				FilterAccept, "ack of the packet",
+				filters.FilterAccept, "ack of the packet",
 				false, remoteISDButNeighbourAddr, "a neighbour being in a remote ISD"},
 			{WLAllNeighbours, "WLAllNeighbours",
-				FilterDrop, "drop of the packet",
+				filters.FilterDrop, "drop of the packet",
 				false, localISDButNoNeighbourAddr, "a non-neighbour of the local ISD"},
 			{OutsideWLSetting(7), "an invalid setting",
-				FilterError, "a filter error",
+				filters.FilterError, "a filter error",
 				true, localISDNeighbourAddr, "a neighbour of the local ISD"},
 		}
 
@@ -449,14 +465,20 @@ func Test_FilterAddr(t *testing.T) {
 					pathToTopoFile:    pathToFile,
 					rescanInterval:    360,
 					lastScan:          time.Now(),
-					localIA:           localAddr.IA,
+					localIA:           localIA,
 					neighbouringNodes: scannedNeighbours,
 					localInfraNodes:   scannedInfraNodes,
 					OutsideWLSetting:  test.outsideSettings,
 					LocalWLSetting:    NoLocalWL,
 				}
 
-				result, err := filter.FilterAddr(test.addressToFilter)
+				result, err := filter.FilterPacket(
+					&snet.SCIONPacket{
+						Bytes: nil,
+						SCIONPacketInfo: snet.SCIONPacketInfo{
+							Source: test.addressToFilter,
+						},
+					})
 
 				Convey(fmt.Sprintf("Should result in %v", test.resultName), func() {
 					So(result, ShouldResemble, test.result)
