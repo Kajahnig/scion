@@ -26,23 +26,22 @@ import (
 	"github.com/scionproto/scion/go/lib/snet"
 )
 
-//var _ snet.RawSCIONConn = (*FilteringRawSCIONConn)(nil) TODO: uncomment when interface available
+var _ snet.PacketConn = (*FilteringRawSCIONConn)(nil)
 
 type FilteringRawSCIONConn struct {
-	conn          *snet.RawSCIONConn
+	conn          snet.PacketConn
 	packetFilters []*PacketFilter
 
 	mtx             sync.Mutex
 	SCMPWriteBuffer common.RawBytes
 }
 
-func NewFilteringRawScionConn(conn *snet.RawSCIONConn, packetFilters []*PacketFilter) *snet.RawSCIONConn {
-	filter := &FilteringRawSCIONConn{
+func NewFilteringRawScionConn(conn snet.PacketConn, packetFilters []*PacketFilter) snet.PacketConn {
+	return &FilteringRawSCIONConn{
 		conn:            conn,
 		SCMPWriteBuffer: make(common.RawBytes, common.MaxMTU),
 		packetFilters:   append([]*PacketFilter{}, packetFilters...),
 	}
-	return filter.conn //TODO: return the whole filter when interface available
 }
 
 func (c *FilteringRawSCIONConn) Close() error {
