@@ -50,6 +50,23 @@ const (
 	WLCoreNeighbours
 )
 
+func (setting OutsideWLSetting) toString() string {
+	switch setting {
+	case NoOutsideWL:
+		return "No outside whitelisting"
+	case WLISD:
+		return "Whitelisting of ISD"
+	case WLAllNeighbours:
+		return "Whitelisting of all neighbours"
+	case WLUpAndDownNeighbours:
+		return "Whitelisting of up and downstream neighbours"
+	case WLCoreNeighbours:
+		return "Whitelisting of core neighbours"
+	default:
+		return "Unknown outside whitelisting setting"
+	}
+}
+
 const (
 	//Settings for Filtering requests from the local AS
 	// Whitelist all requests form the local AS
@@ -60,12 +77,25 @@ const (
 	NoLocalWL
 )
 
+func (setting LocalWLSetting) toString() string {
+	switch setting {
+	case WLLocalAS:
+		return "Whitelisting of local AS"
+	case WLLocalInfraNodes:
+		return "Whitelisting of local infra nodes"
+	case NoLocalWL:
+		return "No Local Whitelisting"
+	default:
+		return "Unknown local whitelisting setting"
+	}
+}
+
 var _ filters.PacketFilter = (*WhitelistFilter)(nil)
 
 type WhitelistFilter struct {
 	//contains the path to the topology file used to get identifiers of neighbouring ASes
 	pathToTopoFile string
-	//how often the topology file is rescanned
+	//how often the topology file is rescanned in minutes
 	rescanInterval float64
 	//last time the topology file was scanned
 	lastScan time.Time
@@ -88,12 +118,23 @@ type WhitelistFilter struct {
 func NewWhitelistFilter(pathToTopoFile string, rescanInterval float64,
 	outsideWLSetting OutsideWLSetting, localWLSetting LocalWLSetting) (*WhitelistFilter, error) {
 
-	var localIA addr.IA
+	if rescanInterval <= 0 {
+		return nil, common.NewBasicError("Whitelisting filter cannot be initialised with negative rescanning interval",
+			nil, "rescanInterval", rescanInterval)
+	}
+	if outsideWLSetting == NoOutsideWL && localWLSetting == NoLocalWL {
+		return nil, common.NewBasicError("Whitelisting filter cannot be with "+
+			"no outside and no local whitelisting at the same time, this blocks all traffic.",
+			nil, "outsideWLSettings", outsideWLSetting, "localWLSettings", localWLSetting)
+	}
 
 	topo, err := getTopo(pathToTopoFile)
-	if err == nil {
-		localIA = topo.ISD_AS
+	if err != nil {
+		return nil, common.NewBasicError("Whitelisting filter cannot be initialised with an invalid topology file",
+			nil, "err", err)
 	}
+
+	localIA := topo.ISD_AS
 
 	return &WhitelistFilter{
 		pathToTopoFile:    pathToTopoFile,
@@ -103,7 +144,7 @@ func NewWhitelistFilter(pathToTopoFile string, rescanInterval float64,
 		localInfraNodes:   map[string]string{},
 		OutsideWLSetting:  outsideWLSetting,
 		LocalWLSetting:    localWLSetting,
-	}, err
+	}, nil
 }
 
 func getTopo(pathToTopoFile string) (*topology.Topo, error) {
@@ -129,7 +170,7 @@ func (f *WhitelistFilter) FilterPacket(pkt *snet.SCIONPacket) (filters.FilterRes
 
 func (f *WhitelistFilter) rescanTopoFileIfNecessary() {
 	if f.OutsideWLSetting > 1 || f.LocalWLSetting == WLLocalInfraNodes {
-		if time.Since(f.lastScan).Seconds() > f.rescanInterval {
+		if time.Since(f.lastScan).Minutes() > f.rescanInterval {
 			err := f.rescanTopoFile()
 			if err != nil {
 				log.Error("Whitelisting filter failed to rescan topology file",

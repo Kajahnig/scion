@@ -32,8 +32,17 @@ const (
 	FilterDrop
 )
 
-type AddrFilter interface {
-	FilterAddr(addr *snet.Addr) (FilterResult, error)
+func (result FilterResult) ToString() string {
+	switch result {
+	case FilterError:
+		return "Filter Error"
+	case FilterDrop:
+		return "Filter Drop"
+	case FilterAccept:
+		return "Filter Accept"
+	default:
+		return "Unknown Filter Result Value"
+	}
 }
 
 type PacketFilter interface {

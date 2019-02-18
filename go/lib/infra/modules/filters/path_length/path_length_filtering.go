@@ -30,33 +30,31 @@ var SCMPClassType = scmp.ClassType{
 var _ filters.PacketFilter = (*PathLengthFilter)(nil)
 
 type PathLengthFilter struct {
-	maxPathLength int
 	minPathLength int
+	maxPathLength int
 }
 
 func NewPathLengthFilter(minLength int, maxLength int) (*PathLengthFilter, error) {
 
-	min := 0
-	max := 0
-
-	if minLength >= 1 {
-		min = minLength
+	if minLength < 0 {
+		return nil, common.NewBasicError("Unable to create path length filter with negative min length",
+			nil, "minlength", minLength)
 	}
 
-	if maxLength >= 1 {
-		max = maxLength
+	if maxLength < 0 {
+		return nil, common.NewBasicError("Unable to create path length filter with negative max length",
+			nil, "maxlength", maxLength)
 	}
 
-	var err error = nil
-	if min > max {
-		err = common.NewBasicError("Unable to create path length filter with bigger min than max",
-			nil, "maxlength", maxLength, "minlength", minLength)
+	if minLength > maxLength {
+		return nil, common.NewBasicError("Unable to create path length filter with bigger min than max",
+			nil, "minlength", minLength, "maxlength", maxLength)
 	}
 
 	return &PathLengthFilter{
-		maxPathLength: max,
-		minPathLength: min,
-	}, err
+		minPathLength: minLength,
+		maxPathLength: maxLength,
+	}, nil
 }
 
 func (f *PathLengthFilter) SCMPError() scmp.ClassType {

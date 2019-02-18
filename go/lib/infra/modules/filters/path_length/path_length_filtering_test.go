@@ -31,40 +31,58 @@ func Test_NewPathLengthFilter(t *testing.T) {
 	Convey("Creating a new filter", t, func() {
 
 		tests := []struct {
-			minPathLength          int
-			maxPathLength          int
-			resultingMinPathLength int
-			resultingMaxPathLength int
-			errorString            string
+			minPathLength int
+			maxPathLength int
 		}{
-			{-2, -1,
-				0, 0, " not"},
-			{1, 2,
-				1, 2, " not"},
-			{2, 1,
-				2, 1, ""},
+			{-1, 2},
+			{3, -2},
+			{1, 0},
 		}
 
 		for _, test := range tests {
 
 			filter, err := NewPathLengthFilter(test.minPathLength, test.maxPathLength)
 
-			Convey(fmt.Sprintf("With minlength %v and maxlength %v should%v return an error",
-				test.minPathLength, test.maxPathLength, test.errorString), func() {
+			Convey(fmt.Sprintf("With minlength %v and maxlength %v",
+				test.minPathLength, test.maxPathLength), func() {
 
-				if len(test.errorString) == 0 {
+				Convey("Should return an error", func() {
 					So(err, ShouldNotBeNil)
-				} else {
+				})
+
+				Convey("Should return nil instead of a filter", func() {
+					So(filter, ShouldBeNil)
+				})
+			})
+		}
+	})
+
+	Convey("Creating a new filter", t, func() {
+
+		tests := []struct {
+			minPathLength int
+			maxPathLength int
+		}{
+			{0, 0},
+			{0, 1},
+			{1, 3},
+		}
+
+		for _, test := range tests {
+
+			filter, err := NewPathLengthFilter(test.minPathLength, test.maxPathLength)
+
+			Convey(fmt.Sprintf("With minlength %v and maxlength %v should not return an error",
+				test.minPathLength, test.maxPathLength), func() {
+
+				Convey("Should not return an error", func() {
 					So(err, ShouldBeNil)
-				}
-			})
+				})
 
-			Convey(fmt.Sprintf("Should set the min path length to %v", test.resultingMinPathLength), func() {
-				So(filter.minPathLength, ShouldEqual, test.resultingMinPathLength)
-			})
-
-			Convey(fmt.Sprintf("Should set the max path length to %v", test.resultingMaxPathLength), func() {
-				So(filter.maxPathLength, ShouldEqual, test.resultingMaxPathLength)
+				Convey("Should set the correct path lengths", func() {
+					So(filter.minPathLength, ShouldEqual, test.minPathLength)
+					So(filter.maxPathLength, ShouldEqual, test.maxPathLength)
+				})
 			})
 		}
 	})
@@ -203,24 +221,11 @@ func Test_FilterPacket(t *testing.T) {
 				result, _ := filter.FilterPacket(packet)
 
 				Convey(fmt.Sprintf("Filtering a path of length %v, should result in %v",
-					test.pathLength, filterResultAsString(test.results[i])), func() {
+					test.pathLength, test.results[i].ToString()), func() {
 					So(result, ShouldResemble, test.results[i])
 				})
 			}
 		})
-	}
-}
-
-func filterResultAsString(result filters.FilterResult) string {
-	switch result {
-	case filters.FilterError:
-		return "Filter Error"
-	case filters.FilterDrop:
-		return "Filter Drop"
-	case filters.FilterAccept:
-		return "Filter Accept"
-	default:
-		return "Unknown Filter Result Value"
 	}
 }
 

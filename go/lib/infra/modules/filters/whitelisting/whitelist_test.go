@@ -29,11 +29,12 @@ import (
 // This test uses the test_topology.json file in the same folder.
 // It is a copy of the topology.json from ASff00_0_211 of the default topology.
 var (
-	peer221, _   = addr.IAFromString("2-ff00:0:221")
-	peer111, _   = addr.IAFromString("1-ff00:0:111")
-	child212, _  = addr.IAFromString("2-ff00:0:212")
-	child222, _  = addr.IAFromString("2-ff00:0:222")
-	parent210, _ = addr.IAFromString("2-ff00:0:210")
+	minutesInADay = float64(1140)
+	peer221, _    = addr.IAFromString("2-ff00:0:221")
+	peer111, _    = addr.IAFromString("1-ff00:0:111")
+	child212, _   = addr.IAFromString("2-ff00:0:212")
+	child222, _   = addr.IAFromString("2-ff00:0:222")
+	parent210, _  = addr.IAFromString("2-ff00:0:210")
 
 	oldPeer115, _   = addr.IAFromString("1-ff00:0:115")
 	oldChild225, _  = addr.IAFromString("2-ff00:0:225")
@@ -50,12 +51,12 @@ var (
 
 	pathToFile = "./test_topology.json"
 
-	localScionAddr             = snet.SCIONAddress{IA: localIA, Host: anyHostAddr}
-	localInfraNodeScionAddr    = snet.SCIONAddress{IA: localIA, Host: infraHostAddr}
-	localISDNeighbourAddr      = snet.SCIONAddress{IA: peer221, Host: anyHostAddr}
-	localISDButNoNeighbourAddr = snet.SCIONAddress{IA: nonNeighbourFromLocalISD, Host: anyHostAddr}
-	remoteISDAddr              = snet.SCIONAddress{IA: nonNeighbourFromRemoteISD, Host: anyHostAddr}
-	remoteISDButNeighbourAddr  = snet.SCIONAddress{IA: peer111, Host: anyHostAddr}
+	localScionAddr            = snet.SCIONAddress{IA: localIA, Host: anyHostAddr}
+	localInfraNodeScionAddr   = snet.SCIONAddress{IA: localIA, Host: infraHostAddr}
+	localISDNeighbourAddr     = snet.SCIONAddress{IA: peer221, Host: anyHostAddr}
+	localISDNonNeighbourAddr  = snet.SCIONAddress{IA: nonNeighbourFromLocalISD, Host: anyHostAddr}
+	remoteISDNonNeighbourAddr = snet.SCIONAddress{IA: nonNeighbourFromRemoteISD, Host: anyHostAddr}
+	remoteISDNeighbourAddr    = snet.SCIONAddress{IA: peer111, Host: anyHostAddr}
 
 	scannedNeighbours          = map[addr.IA]string{peer221: "", peer111: "", child212: "", child222: "", parent210: ""}
 	scannedUpAndDownNeighbours = map[addr.IA]string{child212: "", child222: "", parent210: ""}
@@ -63,128 +64,144 @@ var (
 	scannedInfraNodes          = map[string]string{"127.0.0.209": "", "127.0.0.210": "", "127.0.0.211": "", "127.0.0.212": ""}
 	emptyInfraNodesMap         = map[string]string{}
 
-	oldNeighbours          = map[addr.IA]string{oldPeer115: "", oldChild225: "", oldParent215: "", oldCore233: ""}
-	oldUpAndDownNeighbours = map[addr.IA]string{oldChild225: "", oldParent215: ""}
-	oldCoreNeighbours      = map[addr.IA]string{oldCore233: ""}
+	oldNeighbours = map[addr.IA]string{oldPeer115: "", oldChild225: "", oldParent215: "", oldCore233: ""}
+	oldInfraNodes = map[string]string{"127.0.0.001": "", "127.0.0.002": ""}
 )
 
 func Test_NewWhitelistFilter(t *testing.T) {
 
-	Convey("Creating a new filter with a valid path to the topology file", t, func() {
+	Convey("Creating a new filter", t, func() {
 
-		filter, err := NewWhitelistFilter(pathToFile, 0, WLAllNeighbours, WLLocalInfraNodes)
+		Convey("With valid settings", func() {
 
-		Convey("Should not return an error", func() {
-			So(err, ShouldBeNil)
+			filter, err := NewWhitelistFilter(pathToFile, minutesInADay, WLAllNeighbours, WLLocalInfraNodes)
+
+			Convey("Should not return an error", func() {
+				So(err, ShouldBeNil)
+			})
+
+			Convey("Should set the local IA address of the filter", func() {
+				So(filter.localIA, ShouldResemble, localIA)
+			})
+
+			Convey("Should not fill any maps of the filter", func() {
+				So(filter.neighbouringNodes, ShouldBeEmpty)
+				So(filter.localInfraNodes, ShouldBeEmpty)
+			})
 		})
 
-		Convey("Should set the local IA address of the filter", func() {
-			So(filter.localIA, ShouldResemble, localIA)
-		})
+		tests := []struct {
+			description        string
+			pathToTopoFile     string
+			rescanningInterval float64
+			outsideSettings    OutsideWLSetting
+			localSettings      LocalWLSetting
+		}{
+			{"With an invalid path to the topology file",
+				"invalidPath", minutesInADay, WLAllNeighbours, WLLocalInfraNodes},
+			{"With a negative rescanning interval",
+				pathToFile, float64(-3), WLAllNeighbours, WLLocalInfraNodes},
+			{"With no outside whitelisting and no local whitelisting",
+				pathToFile, minutesInADay, NoOutsideWL, NoLocalWL},
+		}
 
-		Convey("Should not fill any maps of the filter", func() {
-			So(filter.neighbouringNodes, ShouldBeEmpty)
-			So(filter.localInfraNodes, ShouldBeEmpty)
-		})
-	})
+		for _, test := range tests {
 
-	Convey("Creating a new filter with an invalid path to the topology file", t, func() {
+			Convey(test.description, func() {
 
-		filter, err := NewWhitelistFilter("invalidPath", 0, WLAllNeighbours, WLLocalInfraNodes)
+				filter, err := NewWhitelistFilter(test.pathToTopoFile, test.rescanningInterval, test.outsideSettings, test.localSettings)
 
-		Convey("Should return an error", func() {
-			So(err, ShouldNotBeNil)
-		})
+				Convey("Should return an error", func() {
+					So(err, ShouldNotBeNil)
+				})
 
-		Convey("Should not set the local IA address of the filter", func() {
-			So(filter.localIA, ShouldBeZeroValue)
-		})
+				Convey("Should return nil instead of a filter", func() {
+					So(filter, ShouldBeNil)
+				})
+			})
 
-		Convey("Should not fill any maps of the filter", func() {
-			So(filter.neighbouringNodes, ShouldBeEmpty)
-			So(filter.localInfraNodes, ShouldBeEmpty)
-		})
+		}
 	})
 }
 
 func Test_rescanTopoFile(t *testing.T) {
 
-	Convey("Rescanning the topology file", t, func() {
+	Convey("Rescanning the topology file on a filter with outside settings", t, func() {
 
 		tests := []struct {
-			outsideSettings OutsideWLSetting
-			settingsName    string
-			neighboursMap   map[addr.IA]string
-			contentName     string
+			outsideSettings    OutsideWLSetting
+			neighboursMap      map[addr.IA]string
+			contentDescription string
 		}{
 
-			{WLAllNeighbours, "WLAllNeighbours",
-				scannedNeighbours, "all neighbours"},
-			{WLUpAndDownNeighbours, "WLUpAndDownNeighbours",
-				scannedUpAndDownNeighbours, "up and downstream neighbours"},
-			{WLCoreNeighbours, "WLCoreNeighbours",
-				emptyNeighboursMap, "core neighbours"},
-			{NoOutsideWL, "NoOutsideWL",
-				emptyNeighboursMap, "no neighbours"},
-			{WLISD, "WLISD",
-				emptyNeighboursMap, "no neighbours"},
+			{WLAllNeighbours, scannedNeighbours,
+				"Should fill the map of neighbouring nodes with all neighbours"},
+			{WLUpAndDownNeighbours, scannedUpAndDownNeighbours,
+				"Should fill the map of neighbouring nodes with up and downstream neighbours"},
+			{WLCoreNeighbours, emptyNeighboursMap,
+				"Should fill the map of neighbouring nodes with core neighbours"},
+			{NoOutsideWL, emptyNeighboursMap,
+				"Should not fill the map of neighbouring nodes"},
+			{WLISD, emptyNeighboursMap,
+				"Should not fill the map of neighbouring nodes"},
 		}
 
 		for _, test := range tests {
 
-			Convey(fmt.Sprintf("With Outside settings %q and no local Whitelisting", test.settingsName), func() {
+			Convey(test.outsideSettings.toString(), func() {
 
-				filter, err := NewWhitelistFilter(pathToFile, 0, test.outsideSettings, NoLocalWL)
-
-				Convey("Initializing a new Filter should not create an error", func() {
-					So(err, ShouldBeNil)
-				})
+				filter, err := NewWhitelistFilter(pathToFile, minutesInADay, test.outsideSettings, WLLocalAS)
 
 				err = filter.rescanTopoFile()
 
-				Convey("Rescanning the topology file should not create an error", func() {
+				Convey("Should not create an error", func() {
 					So(err, ShouldBeNil)
 				})
 
-				Convey(fmt.Sprintf("The map of neighbouring nodes should be filled with %v", test.contentName), func() {
+				Convey(test.contentDescription, func() {
 					So(filter.neighbouringNodes, ShouldResemble, test.neighboursMap)
+				})
+
+				Convey("Should not fill the local infra nodes map", func() {
+					So(filter.localInfraNodes, ShouldBeEmpty)
 				})
 			})
 		}
 
+	})
+	Convey("Rescanning the topology file on a filter with local settings", t, func() {
+
 		localTests := []struct {
-			localSettings     LocalWLSetting
-			settingsName      string
-			localInfraNodeMap map[string]string
-			contentName       string
+			localSettings      LocalWLSetting
+			localInfraNodeMap  map[string]string
+			contentDescription string
 		}{
 
-			{WLLocalAS, "WLLocalAS",
-				emptyInfraNodesMap, "nothing"},
-			{WLLocalInfraNodes, "WLLocalInfraNodes",
-				scannedInfraNodes, "the local infra nodes IPs"},
-			{NoLocalWL, "NoLocalWL",
-				emptyInfraNodesMap, "nothing"},
+			{WLLocalAS, emptyInfraNodesMap,
+				"Should not fill the local infra nodes map"},
+			{WLLocalInfraNodes, scannedInfraNodes,
+				"Should fill the local infra nodes map with local infra IPs"},
+			{NoLocalWL, emptyInfraNodesMap,
+				"Should not fill the local infra nodes map"},
 		}
 
 		for _, test := range localTests {
 
-			Convey(fmt.Sprintf("With local settings %q and no outside Whitelisting", test.settingsName), func() {
+			Convey(test.localSettings.toString(), func() {
 
-				filter, err := NewWhitelistFilter(pathToFile, 0, NoOutsideWL, test.localSettings)
-
-				Convey("Initializing a new Filter should not create an error", func() {
-					So(err, ShouldBeNil)
-				})
-
+				filter, err := NewWhitelistFilter(pathToFile, minutesInADay, WLISD, test.localSettings)
 				err = filter.rescanTopoFile()
 
-				Convey("Rescanning the topology file should not create an error", func() {
+				Convey("Should not create an error", func() {
 					So(err, ShouldBeNil)
 				})
 
-				Convey(fmt.Sprintf("The map of neighbouring nodes should contain %v", test.contentName), func() {
+				Convey(test.contentDescription, func() {
 					So(filter.localInfraNodes, ShouldResemble, test.localInfraNodeMap)
+				})
+
+				Convey("Should not fill the map of neighbouring nodes", func() {
+					So(filter.neighbouringNodes, ShouldBeEmpty)
 				})
 			})
 		}
@@ -194,124 +211,127 @@ func Test_rescanTopoFile(t *testing.T) {
 
 func Test_rescanTopoFileIfNecessary(t *testing.T) {
 
-	Convey("A newly created filter", t, func() {
+	Convey("A rescanTopoFileIfNecessary call on a newly created filter", t, func() {
 
-		filter, _ := NewWhitelistFilter(pathToFile, 360, WLAllNeighbours, WLLocalInfraNodes)
+		filter, _ := NewWhitelistFilter(pathToFile, 60, WLAllNeighbours, WLLocalInfraNodes)
 
-		Convey("Should have empty node maps", func() {
+		Convey("With empty node maps", func() {
 			So(filter.neighbouringNodes, ShouldBeEmpty)
 			So(filter.localInfraNodes, ShouldBeEmpty)
 		})
 
 		filter.rescanTopoFileIfNecessary()
 
-		Convey("Should rescan the topology file and fill the neighbours map on a rescanTopoFileIfNecessary call", func() {
+		Convey("Should fill the neighbours and infra node maps", func() {
 			So(filter.neighbouringNodes, ShouldResemble, scannedNeighbours)
 			So(filter.localInfraNodes, ShouldResemble, scannedInfraNodes)
 		})
 
-		Convey("Should have the lastScan field set to be somewhere in the last 10 seconds", func() {
+		Convey("Should set the lastScan field to somewhere in the last 10 seconds", func() {
 			So(filter.lastScan, ShouldHappenWithin, time.Second*10, time.Now())
 		})
 	})
 
-	Convey("An existing filter", t, func() {
+	Convey("A rescanTopoFileIfNecessary call on an existing filter", t, func() {
 
 		filter := &WhitelistFilter{
 			pathToTopoFile:    pathToFile,
-			rescanInterval:    360,
-			lastScan:          time.Now().Add(-time.Second * 361),
+			rescanInterval:    60,
+			lastScan:          time.Now().Add(-time.Minute * 61),
 			localIA:           localIA,
 			neighbouringNodes: oldNeighbours,
-			localInfraNodes:   emptyInfraNodesMap,
+			localInfraNodes:   oldInfraNodes,
 			OutsideWLSetting:  WLAllNeighbours,
 			LocalWLSetting:    WLLocalInfraNodes,
 		}
 
-		Convey("With a previously old neighbouring node map", func() {
+		Convey("With maps filled with old values", func() {
 			So(filter.neighbouringNodes, ShouldResemble, oldNeighbours)
+			So(filter.localInfraNodes, ShouldResemble, oldInfraNodes)
 		})
 
 		Convey("And a lastScan longer ago than the rescan interval", func() {
-			So(time.Since(filter.lastScan).Seconds(), ShouldBeGreaterThan, filter.rescanInterval)
+			So(time.Since(filter.lastScan).Minutes(), ShouldBeGreaterThan, filter.rescanInterval)
 		})
 
 		filter.rescanTopoFileIfNecessary()
 
-		Convey("Should rescan the topology file and refill the neighbours map on a rescanTopoFileIfNecessary call", func() {
+		Convey("Should refill the neighbours and infra nodes maps with new values", func() {
 			So(filter.neighbouringNodes, ShouldResemble, scannedNeighbours)
 			So(filter.localInfraNodes, ShouldResemble, scannedInfraNodes)
 		})
 
-		Convey("Should have the lastScan field set to be somewhere in the last 10 seconds", func() {
+		Convey("Should set the lastScan field to be somewhere in the last 10 seconds", func() {
 			So(filter.lastScan, ShouldHappenWithin, time.Second*10, time.Now())
 		})
 	})
 
-	Convey("An existing filter", t, func() {
+	Convey("A rescanTopoFileIfNecessary call on an existing filter", t, func() {
 
 		filter := &WhitelistFilter{
 			pathToTopoFile:    "invalidPath",
-			rescanInterval:    360,
-			lastScan:          time.Now().Add(-time.Second * 361),
+			rescanInterval:    60,
+			lastScan:          time.Now().Add(-time.Minute * 61),
 			localIA:           localIA,
 			neighbouringNodes: oldNeighbours,
-			localInfraNodes:   emptyInfraNodesMap,
+			localInfraNodes:   oldInfraNodes,
 			OutsideWLSetting:  WLAllNeighbours,
 			LocalWLSetting:    WLLocalInfraNodes,
 		}
 
-		Convey("With a previously old neighbouring node map", func() {
+		Convey("With maps filled with old values", func() {
 			So(filter.neighbouringNodes, ShouldResemble, oldNeighbours)
+			So(filter.localInfraNodes, ShouldResemble, oldInfraNodes)
 		})
 
 		Convey("And a lastScan longer ago than the rescan interval, but an invalid topology file path", func() {
-			So(time.Since(filter.lastScan).Seconds(), ShouldBeGreaterThan, filter.rescanInterval)
+			So(time.Since(filter.lastScan).Minutes(), ShouldBeGreaterThan, filter.rescanInterval)
 		})
 
 		lastScan := filter.lastScan
 		filter.rescanTopoFileIfNecessary()
 
-		Convey("Should keep the same node maps on a rescanTopoFileIfNecessary call", func() {
+		Convey("Should not change the values of the node maps", func() {
 			So(filter.neighbouringNodes, ShouldResemble, oldNeighbours)
-			So(filter.localInfraNodes, ShouldResemble, emptyInfraNodesMap)
+			So(filter.localInfraNodes, ShouldResemble, oldInfraNodes)
 		})
 
-		Convey("And have the same value for the lastScan field as before the call", func() {
+		Convey("Should not change the value of the lastScan field", func() {
 			So(filter.lastScan, ShouldResemble, lastScan)
 		})
 	})
 
-	Convey("An existing filter", t, func() {
+	Convey("A rescanTopoFileIfNecessary call on an existing filter", t, func() {
 
 		filter := &WhitelistFilter{
 			pathToTopoFile:    pathToFile,
-			rescanInterval:    360,
+			rescanInterval:    60,
 			lastScan:          time.Now(),
 			localIA:           localIA,
 			neighbouringNodes: oldNeighbours,
-			localInfraNodes:   emptyInfraNodesMap,
+			localInfraNodes:   oldInfraNodes,
 			OutsideWLSetting:  WLAllNeighbours,
 			LocalWLSetting:    WLLocalInfraNodes,
 		}
 
-		Convey("With a previous neighbours map", func() {
+		Convey("With maps filled with old values", func() {
 			So(filter.neighbouringNodes, ShouldResemble, oldNeighbours)
+			So(filter.localInfraNodes, ShouldResemble, oldInfraNodes)
 		})
 
 		Convey("And a lastScan not longer ago than the rescan interval", func() {
-			So(time.Since(filter.lastScan).Seconds(), ShouldBeLessThanOrEqualTo, filter.rescanInterval)
+			So(time.Since(filter.lastScan).Minutes(), ShouldBeLessThanOrEqualTo, filter.rescanInterval)
 		})
 
 		lastScan := filter.lastScan
 		filter.rescanTopoFileIfNecessary()
 
-		Convey("Should keep the same node maps on a rescanTopoFileIfNecessary call", func() {
+		Convey("Should not change the values of the node maps", func() {
 			So(filter.neighbouringNodes, ShouldResemble, oldNeighbours)
-			So(filter.localInfraNodes, ShouldResemble, emptyInfraNodesMap)
+			So(filter.localInfraNodes, ShouldResemble, oldInfraNodes)
 		})
 
-		Convey("And have the same value for the lastScan field as before the call", func() {
+		Convey("Should not change the value of the lastScan field", func() {
 			So(filter.lastScan, ShouldResemble, lastScan)
 		})
 	})
@@ -320,104 +340,92 @@ func Test_rescanTopoFileIfNecessary(t *testing.T) {
 
 func Test_filterDependingOnInfraNodeWL(t *testing.T) {
 
-	tests := []struct {
-		localAddress snet.SCIONAddress
-		addressName  string
-		result       filters.FilterResult
-		resultName   string
-	}{
-		{localInfraNodeScionAddr, "an infrastructure",
-			filters.FilterAccept, "Ack of the packet"},
-		{localScionAddr, "a non-infrastructure",
-			filters.FilterDrop, "Drop of the packet"},
-	}
-
 	filter := &WhitelistFilter{
 		pathToTopoFile:    pathToFile,
-		rescanInterval:    360,
+		rescanInterval:    60,
 		lastScan:          time.Now(),
 		localIA:           localIA,
-		neighbouringNodes: oldNeighbours,
+		neighbouringNodes: scannedNeighbours,
 		localInfraNodes:   scannedInfraNodes,
 		OutsideWLSetting:  NoOutsideWL,
 		LocalWLSetting:    WLLocalInfraNodes,
 	}
 
-	Convey(fmt.Sprintf("With local filtering set to WLLocalInfraNodes"), t, func() {
+	Convey(fmt.Sprintf("A filter that whitelists local infra nodes"), t, func() {
 
-		for _, test := range tests {
+		Convey("Should accept requests from local infra nodes", func() {
 
-			result, err := filter.filterDependingOnInfraNodeWL(test.localAddress)
+			result, err := filter.filterDependingOnInfraNodeWL(localInfraNodeScionAddr)
 
-			Convey(fmt.Sprintf("Filtering %v address should result in %v", test.addressName, test.resultName), func() {
-				So(result, ShouldResemble, test.result)
-				So(err, ShouldBeNil)
-			})
-		}
+			So(result, ShouldResemble, filters.FilterAccept)
+			So(err, ShouldBeNil)
+		})
+
+		Convey("Should drop requests from non infra nodes", func() {
+
+			result, err := filter.filterDependingOnInfraNodeWL(localScionAddr)
+
+			So(result, ShouldResemble, filters.FilterDrop)
+			So(err, ShouldBeNil)
+		})
 	})
 }
 
 func Test_FilterAddr(t *testing.T) {
 
-	Convey("Filtering a local address", t, func() {
+	Convey("Filtering on a filter with local settings", t, func() {
+
+		infraPacket := packetFrom(localInfraNodeScionAddr)
+		nonInfraPacket := packetFrom(localScionAddr)
 
 		tests := []struct {
-			localSettings   LocalWLSetting
-			settingsName    string
-			result          filters.FilterResult
-			resultName      string
-			isError         bool
-			infraNodesMap   map[string]string
-			addressToFilter snet.SCIONAddress
-			addressName     string
+			localSettings     LocalWLSetting
+			isError           bool
+			resultForInfra    filters.FilterResult
+			resultForNonInfra filters.FilterResult
 		}{
-			{WLLocalAS, "WLLocalAS",
-				filters.FilterAccept, "Ack of the packet",
-				false, emptyInfraNodesMap,
-				localScionAddr, "a non-infrastructure"},
-			{NoLocalWL, "NoLocalWL",
-				filters.FilterDrop, "Drop of the packet",
-				false, emptyInfraNodesMap,
-				localInfraNodeScionAddr, "an infrastructure"},
-			{WLLocalInfraNodes, "WLLocalInfraNodes",
-				filters.FilterAccept, "Ack of the packet",
-				false, scannedInfraNodes,
-				localInfraNodeScionAddr, "an infrastructure"},
-			{WLLocalInfraNodes, "WLLocalInfraNodes",
-				filters.FilterDrop, "Drop of the packet",
-				false, scannedInfraNodes,
-				localScionAddr, "a non-infrastructure"},
-			{LocalWLSetting(5), "an invalid Setting",
-				filters.FilterError, "a Filtering error",
-				true, emptyInfraNodesMap,
-				localInfraNodeScionAddr, "an infrastructure"},
+			{WLLocalAS, false,
+				filters.FilterAccept, filters.FilterAccept},
+			{NoLocalWL, false,
+				filters.FilterDrop, filters.FilterDrop},
+			{WLLocalInfraNodes, false,
+				filters.FilterAccept, filters.FilterDrop},
+			{LocalWLSetting(5), true,
+				filters.FilterError, filters.FilterError},
 		}
 
 		for _, test := range tests {
 
-			Convey(fmt.Sprintf("With local filtering set to %v and %v address", test.settingsName, test.addressName), func() {
+			Convey(test.localSettings.toString(), func() {
 
 				filter := &WhitelistFilter{
 					pathToTopoFile:    pathToFile,
-					rescanInterval:    360,
+					rescanInterval:    60,
 					lastScan:          time.Now(),
 					localIA:           localIA,
-					neighbouringNodes: oldNeighbours,
-					localInfraNodes:   test.infraNodesMap,
+					neighbouringNodes: scannedNeighbours,
+					localInfraNodes:   scannedInfraNodes,
 					OutsideWLSetting:  NoOutsideWL,
 					LocalWLSetting:    test.localSettings,
 				}
 
-				result, err := filter.FilterPacket(
-					&snet.SCIONPacket{
-						Bytes: nil,
-						SCIONPacketInfo: snet.SCIONPacketInfo{
-							Source: test.addressToFilter,
-						},
-					})
+				Convey(fmt.Sprintf("Should result in %v for infra packets", test.resultForInfra.ToString()), func() {
 
-				Convey(fmt.Sprintf("Should result in %v", test.resultName), func() {
-					So(result, ShouldResemble, test.result)
+					result, err := filter.FilterPacket(infraPacket)
+
+					So(result, ShouldResemble, test.resultForInfra)
+					if test.isError {
+						So(err, ShouldNotBeNil)
+					} else {
+						So(err, ShouldBeNil)
+					}
+				})
+
+				Convey(fmt.Sprintf("Should result in %v for non infra packets", test.resultForNonInfra.ToString()), func() {
+
+					result, err := filter.FilterPacket(nonInfraPacket)
+
+					So(result, ShouldResemble, test.resultForNonInfra)
 					if test.isError {
 						So(err, ShouldNotBeNil)
 					} else {
@@ -428,44 +436,42 @@ func Test_FilterAddr(t *testing.T) {
 		}
 	})
 
-	Convey("Filtering a remote address", t, func() {
+	Convey("Filtering on a filter with outside settings", t, func() {
+
+		remoteISDNonNeighbourPacket := packetFrom(remoteISDNonNeighbourAddr)
+		remoteISDNeighbourPacket := packetFrom(remoteISDNeighbourAddr)
+		localISDNonNeighbourPacket := packetFrom(localISDNonNeighbourAddr)
+		localISDNeighbourPacket := packetFrom(localISDNeighbourAddr)
 
 		tests := []struct {
-			outsideSettings OutsideWLSetting
-			settingsName    string
-			result          filters.FilterResult
-			resultName      string
-			isError         bool
-			addressToFilter snet.SCIONAddress
-			addressName     string
+			outsideSettings                OutsideWLSetting
+			isError                        bool
+			resultForRemoteISDNonNeighbour filters.FilterResult
+			resultForRemoteISDNeighbour    filters.FilterResult
+			resultForLocalISDNonNeighbour  filters.FilterResult
+			resultForLocalISDNeighbour     filters.FilterResult
 		}{
-			{NoOutsideWL, "NoOutsideWL",
-				filters.FilterDrop, "drop of the packet",
-				false, localISDNeighbourAddr, "the local ISD"},
-			{WLISD, "WLISD",
-				filters.FilterAccept, "ack of the packet",
-				false, localISDButNoNeighbourAddr, "the local ISD"},
-			{WLISD, "WLISD",
-				filters.FilterDrop, "drop of the packet",
-				false, remoteISDAddr, "a remote ISD"},
-			{WLAllNeighbours, "WLAllNeighbours",
-				filters.FilterAccept, "ack of the packet",
-				false, remoteISDButNeighbourAddr, "a neighbour being in a remote ISD"},
-			{WLAllNeighbours, "WLAllNeighbours",
-				filters.FilterDrop, "drop of the packet",
-				false, localISDButNoNeighbourAddr, "a non-neighbour of the local ISD"},
-			{OutsideWLSetting(7), "an invalid setting",
-				filters.FilterError, "a filter error",
-				true, localISDNeighbourAddr, "a neighbour of the local ISD"},
+			{NoOutsideWL, false,
+				filters.FilterDrop, filters.FilterDrop,
+				filters.FilterDrop, filters.FilterDrop},
+			{WLISD, false,
+				filters.FilterDrop, filters.FilterDrop,
+				filters.FilterAccept, filters.FilterAccept},
+			{WLAllNeighbours, false,
+				filters.FilterDrop, filters.FilterAccept,
+				filters.FilterDrop, filters.FilterAccept},
+			{OutsideWLSetting(7), true,
+				filters.FilterError, filters.FilterError,
+				filters.FilterError, filters.FilterError},
 		}
 
 		for _, test := range tests {
 
-			Convey(fmt.Sprintf("With outside filtering set to %v and the address being from %v", test.settingsName, test.addressName), func() {
+			Convey(test.outsideSettings.toString(), func() {
 
 				filter := &WhitelistFilter{
 					pathToTopoFile:    pathToFile,
-					rescanInterval:    360,
+					rescanInterval:    60,
 					lastScan:          time.Now(),
 					localIA:           localIA,
 					neighbouringNodes: scannedNeighbours,
@@ -474,16 +480,51 @@ func Test_FilterAddr(t *testing.T) {
 					LocalWLSetting:    NoLocalWL,
 				}
 
-				result, err := filter.FilterPacket(
-					&snet.SCIONPacket{
-						Bytes: nil,
-						SCIONPacketInfo: snet.SCIONPacketInfo{
-							Source: test.addressToFilter,
-						},
-					})
+				Convey(fmt.Sprintf("Should result in %v for a packet from a non neighbour from a remote ISD",
+					test.resultForRemoteISDNonNeighbour.ToString()), func() {
 
-				Convey(fmt.Sprintf("Should result in %v", test.resultName), func() {
-					So(result, ShouldResemble, test.result)
+					result, err := filter.FilterPacket(remoteISDNonNeighbourPacket)
+
+					So(result, ShouldResemble, test.resultForRemoteISDNonNeighbour)
+					if test.isError {
+						So(err, ShouldNotBeNil)
+					} else {
+						So(err, ShouldBeNil)
+					}
+				})
+
+				Convey(fmt.Sprintf("Should result in %v for a packet from a neighbour from a remote ISD",
+					test.resultForRemoteISDNeighbour.ToString()), func() {
+
+					result, err := filter.FilterPacket(remoteISDNeighbourPacket)
+
+					So(result, ShouldResemble, test.resultForRemoteISDNeighbour)
+					if test.isError {
+						So(err, ShouldNotBeNil)
+					} else {
+						So(err, ShouldBeNil)
+					}
+				})
+
+				Convey(fmt.Sprintf("Should result in %v for a packet from a non neighbour from a local ISD",
+					test.resultForLocalISDNonNeighbour.ToString()), func() {
+
+					result, err := filter.FilterPacket(localISDNonNeighbourPacket)
+
+					So(result, ShouldResemble, test.resultForLocalISDNonNeighbour)
+					if test.isError {
+						So(err, ShouldNotBeNil)
+					} else {
+						So(err, ShouldBeNil)
+					}
+				})
+
+				Convey(fmt.Sprintf("Should result in %v for a packet from a neighbour from a local ISD",
+					test.resultForLocalISDNeighbour.ToString()), func() {
+
+					result, err := filter.FilterPacket(localISDNeighbourPacket)
+
+					So(result, ShouldResemble, test.resultForLocalISDNeighbour)
 					if test.isError {
 						So(err, ShouldNotBeNil)
 					} else {
@@ -493,4 +534,13 @@ func Test_FilterAddr(t *testing.T) {
 			})
 		}
 	})
+}
+
+func packetFrom(addr snet.SCIONAddress) *snet.SCIONPacket {
+	return &snet.SCIONPacket{
+		Bytes: nil,
+		SCIONPacketInfo: snet.SCIONPacketInfo{
+			Source: addr,
+		},
+	}
 }
