@@ -26,9 +26,9 @@ import (
 	"github.com/scionproto/scion/go/lib/snet"
 )
 
-var _ snet.PacketConn = (*FilteringRawSCIONConn)(nil)
+var _ snet.PacketConn = (*FilteringSCIONPacketConn)(nil)
 
-type FilteringRawSCIONConn struct {
+type FilteringSCIONPacketConn struct {
 	conn          snet.PacketConn
 	packetFilters []*PacketFilter
 
@@ -36,19 +36,19 @@ type FilteringRawSCIONConn struct {
 	SCMPWriteBuffer common.RawBytes
 }
 
-func NewFilteringRawScionConn(conn snet.PacketConn, packetFilters []*PacketFilter) snet.PacketConn {
-	return &FilteringRawSCIONConn{
+func NewFilteringRawScionConn(conn snet.PacketConn, packetFilters []*PacketFilter) FilteringSCIONPacketConn {
+	return FilteringSCIONPacketConn{
 		conn:            conn,
 		SCMPWriteBuffer: make(common.RawBytes, common.MaxMTU),
 		packetFilters:   append([]*PacketFilter{}, packetFilters...),
 	}
 }
 
-func (c *FilteringRawSCIONConn) Close() error {
+func (c *FilteringSCIONPacketConn) Close() error {
 	return c.conn.Close()
 }
 
-func (c *FilteringRawSCIONConn) ReadFrom(pkt *snet.SCIONPacket, ov *overlay.OverlayAddr) error {
+func (c *FilteringSCIONPacketConn) ReadFrom(pkt *snet.SCIONPacket, ov *overlay.OverlayAddr) error {
 
 	err := c.conn.ReadFrom(pkt, ov)
 
@@ -64,13 +64,12 @@ func (c *FilteringRawSCIONConn) ReadFrom(pkt *snet.SCIONPacket, ov *overlay.Over
 	return err
 }
 
-func (c *FilteringRawSCIONConn) filter(pkt *snet.SCIONPacket) (bool, error) {
+func (c *FilteringSCIONPacketConn) filter(pkt *snet.SCIONPacket) (bool, error) {
 
 	for _, f := range c.packetFilters {
 		result, err := (*f).FilterPacket(pkt)
 		switch result {
 		case FilterError:
-			//TODO: maybe also return an SCMP with special type here?
 			return false, err
 		case FilterAccept:
 			continue
@@ -85,7 +84,7 @@ func (c *FilteringRawSCIONConn) filter(pkt *snet.SCIONPacket) (bool, error) {
 	return true, nil
 }
 
-func (c *FilteringRawSCIONConn) returnSCMPErrorMsg(receivedPkt *snet.SCIONPacket, scmpCT scmp.ClassType) error {
+func (c *FilteringSCIONPacketConn) returnSCMPErrorMsg(receivedPkt *snet.SCIONPacket, scmpCT scmp.ClassType) error {
 	path := receivedPkt.Path.Copy()
 	err := path.Reverse()
 
@@ -123,24 +122,24 @@ func (c *FilteringRawSCIONConn) returnSCMPErrorMsg(receivedPkt *snet.SCIONPacket
 	return c.writeWithLock(SCMPErrorPkt, overlayAddress)
 }
 
-func (c *FilteringRawSCIONConn) WriteTo(pkt *snet.SCIONPacket, ov *overlay.OverlayAddr) error {
+func (c *FilteringSCIONPacketConn) WriteTo(pkt *snet.SCIONPacket, ov *overlay.OverlayAddr) error {
 	return c.writeWithLock(pkt, ov)
 }
 
-func (c *FilteringRawSCIONConn) writeWithLock(pkt *snet.SCIONPacket, ov *overlay.OverlayAddr) error {
+func (c *FilteringSCIONPacketConn) writeWithLock(pkt *snet.SCIONPacket, ov *overlay.OverlayAddr) error {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 	return c.conn.WriteTo(pkt, ov)
 }
 
-func (c *FilteringRawSCIONConn) SetDeadline(d time.Time) error {
+func (c *FilteringSCIONPacketConn) SetDeadline(d time.Time) error {
 	return c.conn.SetDeadline(d)
 }
 
-func (c *FilteringRawSCIONConn) SetReadDeadline(d time.Time) error {
+func (c *FilteringSCIONPacketConn) SetReadDeadline(d time.Time) error {
 	return c.conn.SetReadDeadline(d)
 }
 
-func (c *FilteringRawSCIONConn) SetWriteDeadline(d time.Time) error {
+func (c *FilteringSCIONPacketConn) SetWriteDeadline(d time.Time) error {
 	return c.conn.SetWriteDeadline(d)
 }

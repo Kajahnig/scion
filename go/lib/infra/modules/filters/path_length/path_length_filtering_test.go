@@ -16,13 +16,14 @@ package path_length
 
 import (
 	"fmt"
+	"testing"
+
+	. "github.com/smartystreets/goconvey/convey"
+
 	"github.com/scionproto/scion/go/lib/common"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters"
 	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/lib/spath"
-	"testing"
-
-	. "github.com/smartystreets/goconvey/convey"
 )
 
 func Test_NewPathLengthFilter(t *testing.T) {

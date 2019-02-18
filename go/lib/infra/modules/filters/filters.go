@@ -21,15 +21,6 @@ import (
 
 type FilterResult int
 
-type AddrFilter interface {
-	FilterAddr(addr *snet.Addr) (FilterResult, error)
-}
-
-type PacketFilter interface {
-	FilterPacket(pkt *snet.SCIONPacket) (FilterResult, error)
-	SCMPError() scmp.ClassType
-}
-
 const (
 	// FilterError means the current filter has encountered an error.
 	FilterError FilterResult = iota
@@ -40,3 +31,12 @@ const (
 	// and it needs to be dropped.
 	FilterDrop
 )
+
+type AddrFilter interface {
+	FilterAddr(addr *snet.Addr) (FilterResult, error)
+}
+
+type PacketFilter interface {
+	FilterPacket(pkt *snet.SCIONPacket) (FilterResult, error)
+	SCMPError() scmp.ClassType
+}

@@ -26,6 +26,8 @@ import (
 	"github.com/scionproto/scion/go/lib/snet"
 )
 
+// This test uses the test_topology.json file in the same folder.
+// It is a copy of the topology.json from ASff00_0_211 of the default topology.
 var (
 	peer221, _   = addr.IAFromString("2-ff00:0:221")
 	peer111, _   = addr.IAFromString("1-ff00:0:111")
