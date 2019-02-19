@@ -15,6 +15,7 @@
 package whitelisting
 
 import (
+	"strconv"
 	"sync"
 	"time"
 
@@ -33,69 +34,27 @@ var SCMPClassType = scmp.ClassType{
 	Type:  scmp.T_F_NotOnWhitelist,
 }
 
-type OutsideWLSetting int
-type LocalWLSetting int
-
-const (
-	//Settings for Filtering requests from outside the local AS
-	//Drop All requests from outside of the local AS
-	NoOutsideWL OutsideWLSetting = iota
-	// Whitelist all requests form the local ISD
-	WLISD
-	// Whitelist only the requests from neighbouring ASes
-	WLAllNeighbours
-	// Whitelist only the requests from neighbouring up- or downstream ASes
-	WLUpAndDownNeighbours
-	//Whitelists only core neighbours
-	WLCoreNeighbours
+var (
+	defaultRescanningInterval = float64(24 * 60) //minutes in a day
+	path_flag                 = "-path"
+	rescanInterval_flag       = "-interval"
+	outsideWL_flag            = "-outside"
+	ISD_value                 = "ISD"
+	allNeighbours_value       = "allN"
+	upAndDownNeighbours_value = "upDownN"
+	coreNeighbours_value      = "coreN"
+	no_value                  = "no"
+	localWL_flag              = "-local"
+	AS_value                  = "AS"
+	infra_value               = "infra"
 )
-
-func (setting OutsideWLSetting) toString() string {
-	switch setting {
-	case NoOutsideWL:
-		return "No outside whitelisting"
-	case WLISD:
-		return "Whitelisting of ISD"
-	case WLAllNeighbours:
-		return "Whitelisting of all neighbours"
-	case WLUpAndDownNeighbours:
-		return "Whitelisting of up and downstream neighbours"
-	case WLCoreNeighbours:
-		return "Whitelisting of core neighbours"
-	default:
-		return "Unknown outside whitelisting setting"
-	}
-}
-
-const (
-	//Settings for Filtering requests from the local AS
-	// Whitelist all requests form the local AS
-	WLLocalAS LocalWLSetting = iota
-	// Whitelist only local requests from infrastructure nodes
-	WLLocalInfraNodes
-	// Drop All requests from the local AS
-	NoLocalWL
-)
-
-func (setting LocalWLSetting) toString() string {
-	switch setting {
-	case WLLocalAS:
-		return "Whitelisting of local AS"
-	case WLLocalInfraNodes:
-		return "Whitelisting of local infra nodes"
-	case NoLocalWL:
-		return "No Local Whitelisting"
-	default:
-		return "Unknown local whitelisting setting"
-	}
-}
 
 var _ filters.PacketFilter = (*WhitelistFilter)(nil)
 
 type WhitelistFilter struct {
 	//contains the path to the topology file used to get identifiers of neighbouring ASes
 	pathToTopoFile string
-	//how often the topology file is rescanned in minutes
+	//how often the topology file is rescanned in minutes, for default see var above
 	rescanInterval float64
 	//last time the topology file was scanned
 	lastScan time.Time
@@ -145,6 +104,54 @@ func NewWhitelistFilter(pathToTopoFile string, rescanInterval float64,
 		OutsideWLSetting:  outsideWLSetting,
 		LocalWLSetting:    localWLSetting,
 	}, nil
+}
+
+func NewWhitelistFilterFromStrings(configParams []string) (*WhitelistFilter, error) {
+	var pathToTopoFile string
+	var rescanInterval float64 = defaultRescanningInterval
+	var outsideSettings = NoOutsideWL
+	var localSettings = NoLocalWL
+	var err error
+
+	for i := 0; i < len(configParams); i += 2 {
+		switch configParams[i] {
+		case path_flag:
+			pathToTopoFile = configParams[i+1]
+			continue
+		case rescanInterval_flag:
+			rescanInterval, err = strconv.ParseFloat(configParams[i+1], 64)
+			if err != nil {
+				return nil, err
+			}
+			continue
+		case outsideWL_flag:
+			switch configParams[i+1] {
+			case ISD_value:
+				outsideSettings = WLISD
+			case allNeighbours_value:
+				outsideSettings = WLAllNeighbours
+			case upAndDownNeighbours_value:
+				outsideSettings = WLUpAndDownNeighbours
+			case coreNeighbours_value:
+				outsideSettings = WLCoreNeighbours
+			}
+			continue
+		case localWL_flag:
+			switch configParams[i+1] {
+			case AS_value:
+				localSettings = WLLocalAS
+			case infra_value:
+				localSettings = WLLocalInfraNodes
+			}
+		}
+	}
+
+	filter, err := NewWhitelistFilter(pathToTopoFile, rescanInterval,
+		outsideSettings, localSettings)
+	if err != nil {
+		return nil, err
+	}
+	return filter, nil
 }
 
 func getTopo(pathToTopoFile string) (*topology.Topo, error) {

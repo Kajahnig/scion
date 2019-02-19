@@ -16,6 +16,7 @@ package path_length
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
@@ -82,6 +83,70 @@ func Test_NewPathLengthFilter(t *testing.T) {
 				Convey("Should set the correct path lengths", func() {
 					So(filter.minPathLength, ShouldEqual, test.minPathLength)
 					So(filter.maxPathLength, ShouldEqual, test.maxPathLength)
+				})
+			})
+		}
+	})
+}
+
+func Test_NewPathLengthFilterFromStrings(t *testing.T) {
+
+	Convey("Creating a whitelisting filter with the strings", t, func() {
+
+		tests := []struct {
+			configString []string
+			minLength    int
+			maxLength    int
+		}{
+			{[]string{maxLength_flag, "3"},
+				0, 3},
+			{[]string{minLength_flag, "0", maxLength_flag, "0"},
+				0, 0},
+			{[]string{minLength_flag, "4", maxLength_flag, "5"},
+				4, 5},
+		}
+
+		for _, test := range tests {
+
+			Convey(strings.Join(test.configString, " "), func() {
+
+				filter, err := NewPathLengthFilterFromStrings(test.configString)
+
+				Convey("Should not return an error", func() {
+					So(err, ShouldBeNil)
+				})
+
+				Convey(fmt.Sprintf("Should set min path length to %v", test.minLength), func() {
+					So(filter.minPathLength, ShouldEqual, test.minLength)
+				})
+
+				Convey(fmt.Sprintf("Should set max path length to %v", test.maxLength), func() {
+					So(filter.maxPathLength, ShouldEqual, test.maxLength)
+				})
+			})
+		}
+	})
+
+	Convey("Creating a whitelisting filter with the strings", t, func() {
+
+		tests := []struct {
+			configString []string
+		}{
+			{[]string{minLength_flag, "3"}},
+			{[]string{minLength_flag, "0", maxLength_flag, "-3"}},
+			{[]string{minLength_flag, "-1", maxLength_flag, "2"}},
+			{[]string{minLength_flag, "2", maxLength_flag, "1"}},
+		}
+
+		for _, test := range tests {
+
+			Convey(strings.Join(test.configString, " "), func() {
+
+				filter, err := NewPathLengthFilterFromStrings(test.configString)
+
+				Convey("Should return an error and nil instead of a filter", func() {
+					So(err, ShouldNotBeNil)
+					So(filter, ShouldBeNil)
 				})
 			})
 		}

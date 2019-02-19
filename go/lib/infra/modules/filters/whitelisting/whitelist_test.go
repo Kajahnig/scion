@@ -16,6 +16,7 @@ package whitelisting
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -120,6 +121,93 @@ func Test_NewWhitelistFilter(t *testing.T) {
 				})
 			})
 
+		}
+	})
+}
+
+func Test_NewWhitelistFilterFromStrings(t *testing.T) {
+
+	Convey("Creating a whitelisting filter with the strings", t, func() {
+
+		tests := []struct {
+			configString    []string
+			pathToTopoFile  string
+			rescanInterval  float64
+			outsideSettings OutsideWLSetting
+			localSettings   LocalWLSetting
+		}{
+			{[]string{path_flag, "./test_topology.json", rescanInterval_flag, "60", outsideWL_flag, no_value, localWL_flag, AS_value},
+				"./test_topology.json", 60, NoOutsideWL, WLLocalAS},
+			{[]string{path_flag, "./test_topology.json", rescanInterval_flag, "3", outsideWL_flag, ISD_value, localWL_flag, infra_value},
+				"./test_topology.json", 3, WLISD, WLLocalInfraNodes},
+			{[]string{path_flag, "./test_topology.json", rescanInterval_flag, "10", outsideWL_flag, allNeighbours_value, localWL_flag, no_value},
+				"./test_topology.json", 10, WLAllNeighbours, NoLocalWL},
+			{[]string{path_flag, "./test_topology.json", rescanInterval_flag, "6000", outsideWL_flag, upAndDownNeighbours_value, localWL_flag, no_value},
+				"./test_topology.json", 6000, WLUpAndDownNeighbours, NoLocalWL},
+			{[]string{path_flag, "./test_topology.json", rescanInterval_flag, "500", outsideWL_flag, coreNeighbours_value, localWL_flag, no_value},
+				"./test_topology.json", 500, WLCoreNeighbours, NoLocalWL},
+			{[]string{path_flag, "./test_topology.json", outsideWL_flag, ISD_value, localWL_flag, infra_value},
+				"./test_topology.json", defaultRescanningInterval, WLISD, WLLocalInfraNodes},
+			{[]string{path_flag, "./test_topology.json", localWL_flag, infra_value},
+				"./test_topology.json", defaultRescanningInterval, NoOutsideWL, WLLocalInfraNodes},
+			{[]string{path_flag, "./test_topology.json", outsideWL_flag, ISD_value},
+				"./test_topology.json", defaultRescanningInterval, WLISD, NoLocalWL},
+		}
+
+		for _, test := range tests {
+
+			Convey(strings.Join(test.configString, " "), func() {
+
+				filter, err := NewWhitelistFilterFromStrings(test.configString)
+
+				Convey("Should not return an error", func() {
+					So(err, ShouldBeNil)
+				})
+
+				Convey(fmt.Sprintf("Should set path to %v", test.pathToTopoFile), func() {
+					So(filter.pathToTopoFile, ShouldResemble, test.pathToTopoFile)
+				})
+
+				Convey(fmt.Sprintf("Should set the rescanning interval to %v", test.rescanInterval), func() {
+					So(filter.rescanInterval, ShouldResemble, test.rescanInterval)
+				})
+
+				Convey(fmt.Sprintf("Should set outside settings to %v", test.outsideSettings.toString()), func() {
+					So(filter.OutsideWLSetting, ShouldResemble, test.outsideSettings)
+				})
+
+				Convey(fmt.Sprintf("Should set local settings to %v", test.localSettings.toString()), func() {
+					So(filter.LocalWLSetting, ShouldResemble, test.localSettings)
+				})
+			})
+		}
+	})
+
+	Convey("Creating a whitelisting filter with the strings", t, func() {
+
+		tests := []struct {
+			configString []string
+		}{
+			{[]string{path_flag, "invalidPath", rescanInterval_flag, "60", outsideWL_flag, no_value, localWL_flag, AS_value}},
+			{[]string{path_flag, "./test_topology.json", rescanInterval_flag, "-3", outsideWL_flag, no_value, localWL_flag, AS_value}},
+			{[]string{path_flag, "./test_topology.json", rescanInterval_flag, "60", outsideWL_flag, no_value, localWL_flag, no_value}},
+			{[]string{rescanInterval_flag, "60", outsideWL_flag, no_value, localWL_flag, AS_value}},
+			{[]string{path_flag, "./test_topology.json", outsideWL_flag, no_value}},
+			{[]string{path_flag, "./test_topology.json", localWL_flag, no_value}},
+			{[]string{path_flag, "./test_topology.json"}},
+		}
+
+		for _, test := range tests {
+
+			Convey(strings.Join(test.configString, " "), func() {
+
+				filter, err := NewWhitelistFilterFromStrings(test.configString)
+
+				Convey("Should return an error and nil instead of a filter", func() {
+					So(err, ShouldNotBeNil)
+					So(filter, ShouldBeNil)
+				})
+			})
 		}
 	})
 }

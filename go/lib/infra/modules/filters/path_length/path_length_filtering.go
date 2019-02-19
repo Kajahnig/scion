@@ -20,12 +20,18 @@ import (
 	"github.com/scionproto/scion/go/lib/scmp"
 	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/lib/spath"
+	"strconv"
 )
 
 var SCMPClassType = scmp.ClassType{
 	Class: scmp.C_Filtering,
 	Type:  scmp.T_F_PathLengthNotAccepted,
 }
+
+var (
+	minLength_flag = "-min"
+	maxLength_flag = "-max"
+)
 
 var _ filters.PacketFilter = (*PathLengthFilter)(nil)
 
@@ -37,12 +43,12 @@ type PathLengthFilter struct {
 func NewPathLengthFilter(minLength int, maxLength int) (*PathLengthFilter, error) {
 
 	if minLength < 0 {
-		return nil, common.NewBasicError("Unable to create path length filter with negative min length",
+		return nil, common.NewBasicError("Unable to create path length filter with negative/invalid min length",
 			nil, "minlength", minLength)
 	}
 
 	if maxLength < 0 {
-		return nil, common.NewBasicError("Unable to create path length filter with negative max length",
+		return nil, common.NewBasicError("Unable to create path length filter with negative/invalid max length",
 			nil, "maxlength", maxLength)
 	}
 
@@ -55,6 +61,34 @@ func NewPathLengthFilter(minLength int, maxLength int) (*PathLengthFilter, error
 		minPathLength: minLength,
 		maxPathLength: maxLength,
 	}, nil
+}
+
+func NewPathLengthFilterFromStrings(configParams []string) (*PathLengthFilter, error) {
+	var minLength = 0
+	var maxLength = -1
+
+	for i := 0; i < len(configParams); i += 2 {
+		switch configParams[i] {
+		case minLength_flag:
+			minLength64, err := strconv.ParseInt(configParams[i+1], 10, 32)
+			if err != nil {
+				return nil, err
+			}
+			minLength = int(minLength64)
+		case maxLength_flag:
+			maxLength64, err := strconv.ParseInt(configParams[i+1], 10, 32)
+			if err != nil {
+				return nil, err
+			}
+			maxLength = int(maxLength64)
+		}
+	}
+
+	filter, err := NewPathLengthFilter(minLength, maxLength)
+	if err != nil {
+		return nil, err
+	}
+	return filter, nil
 }
 
 func (f *PathLengthFilter) SCMPError() scmp.ClassType {
