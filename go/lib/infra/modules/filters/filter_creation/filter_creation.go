@@ -19,15 +19,16 @@ import (
 	"os"
 	"strings"
 
+	"github.com/scionproto/scion/go/lib/common"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/path_length"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/whitelisting"
-	"github.com/scionproto/scion/go/lib/log"
 )
 
 var (
 	whitelist  = "whitelist"
 	pathLength = "pathLength"
+	comment    = "//"
 )
 
 func CreateFiltersFromConfigFile(pathToConfigFile string) ([]*filters.PacketFilter, error) {
@@ -57,20 +58,27 @@ func CreateFiltersFromConfigFile(pathToConfigFile string) ([]*filters.PacketFilt
 func createFilter(filterConfig string) (*filters.PacketFilter, error, bool) {
 	configParams := strings.Fields(filterConfig)
 
-	switch configParams[0] {
-	case whitelist:
-		filter, err := whitelisting.NewWhitelistFilterFromStrings(configParams[1:])
-		packetFilter := filters.PacketFilter(filter)
-		return &packetFilter, err, true
-	case pathLength:
-		filter, err := path_length.NewPathLengthFilterFromStrings(configParams[1:])
-		packetFilter := filters.PacketFilter(filter)
-		return &packetFilter, err, true
-	default:
-		if !strings.HasPrefix(configParams[0], "//") {
-			log.Error("Filter creation ignored a non-comment line in the config file",
-				"line", filterConfig)
-		}
+	if len(configParams) == 0 {
 		return nil, nil, false
 	}
+
+	var filter filters.PacketFilter
+	var err error
+
+	switch configParams[0] {
+	case whitelist:
+		filter, err = whitelisting.NewWhitelistFilterFromStrings(configParams[1:])
+	case pathLength:
+		filter, err = path_length.NewPathLengthFilterFromStrings(configParams[1:])
+	default:
+		if strings.HasPrefix(configParams[0], comment) {
+			return nil, nil, false
+		}
+		err = common.NewBasicError("No matching filter found for configuration", nil, "line", filterConfig)
+	}
+
+	if err != nil {
+		return nil, err, false
+	}
+	return &filter, nil, true
 }

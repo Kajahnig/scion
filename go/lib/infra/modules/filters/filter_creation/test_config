@@ -1,0 +1,8 @@
+//this is a test config file for the filter_creation_test
+
+//A whitelisting filter with a path to the test topology of the
+// whitelisting test
+whitelist -path ../whitelisting/test_topology.json -outside ISD
+
+//A path length filter with maximum path length 3
+pathLength -max 3
