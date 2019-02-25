@@ -1,0 +1,12 @@
+{
+  "BorderRouters": {},
+  "Overlay": "UDP/IPv4",
+  "MTU": 1472,
+  "BeaconService": {},
+  "DiscoveryService": {},
+  "Core": false,
+  "PathService": {},
+  "ZookeeperService": {},
+  "ISD_AS": "2-ff00:0:211",
+  "CertificateService": {}
+}

@@ -31,22 +31,29 @@ func Test_createFilter(t *testing.T) {
 
 		tests := []struct {
 			configString    string
+			configDirString string
 			filterType      reflect.Type
 			typeDescription string
 		}{
 			{"whitelist -path ../whitelisting/test_topology.json -outside ISD",
+				".",
+				reflect.TypeOf(&whitelisting.WhitelistFilter{}),
+				"Whitelist Filter"},
+			{"whitelist -outside ISD",
+				"../whitelisting",
 				reflect.TypeOf(&whitelisting.WhitelistFilter{}),
 				"Whitelist Filter"},
 			{"pathLength -max 3",
+				".",
 				reflect.TypeOf(&path_length.PathLengthFilter{}),
 				"Path Length Filter"},
 		}
 
 		for _, test := range tests {
 
-			Convey(test.configString, func() {
+			Convey(test.configString+"\n and configDir "+test.configDirString, func() {
 
-				filter, err, add := createFilter(test.configString)
+				filter, err, add := createFilter(test.configString, test.configDirString)
 				Convey("Should not return an error", func() {
 					So(err, ShouldBeNil)
 				})
@@ -76,7 +83,7 @@ func Test_createFilter(t *testing.T) {
 
 			Convey(test.configString, func() {
 
-				filter, err, add := createFilter(test.configString)
+				filter, err, add := createFilter(test.configString, ".")
 
 				if test.isError {
 					Convey("Should return an error", func() {
@@ -106,19 +113,25 @@ func Test_CreateFiltersFromConfigFile(t *testing.T) {
 
 		tests := []struct {
 			configFileDescription string
-			pathToConfigFile      string
+			configDirString       string
+			nameOfConfigFile      string
 		}{
-			{"With an invalid path as input",
-				"invalidPath"},
+			{"With a non existent file as file name input",
+				".",
+				"nonexistentFileName"},
+			{"With an nonexistentPath as configDir input",
+				"./nonexistentFolder/anotherOne",
+				"test_config"},
 			{"From a config file containing an error",
-				"./faulty_test_config"},
+				".",
+				"faulty_test_config"},
 		}
 
 		for _, test := range tests {
 
 			Convey(test.configFileDescription, func() {
 
-				filterSlice, err := CreateFiltersFromConfigFile(test.pathToConfigFile)
+				filterSlice, err := CreateFiltersFromConfigFile(test.configDirString, test.nameOfConfigFile)
 
 				Convey("Should return an error", func() {
 					So(err, ShouldNotBeNil)
@@ -133,7 +146,7 @@ func Test_CreateFiltersFromConfigFile(t *testing.T) {
 
 	Convey("Creating filters from a config file with all filters", t, func() {
 
-		filterSlice, err := CreateFiltersFromConfigFile("./test_config")
+		filterSlice, err := CreateFiltersFromConfigFile(".", "test_config")
 
 		Convey("Should not return an error", func() {
 			So(err, ShouldBeNil)

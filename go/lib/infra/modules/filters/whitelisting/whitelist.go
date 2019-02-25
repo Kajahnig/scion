@@ -106,8 +106,8 @@ func NewWhitelistFilter(pathToTopoFile string, rescanInterval float64,
 	}, nil
 }
 
-func NewWhitelistFilterFromStrings(configParams []string) (*WhitelistFilter, error) {
-	var pathToTopoFile string
+func NewWhitelistFilterFromStrings(configParams []string, configDir string) (*WhitelistFilter, error) {
+	var pathToTopoFile = ""
 	var rescanInterval float64 = defaultRescanningInterval
 	var outsideSettings = NoOutsideWL
 	var localSettings = NoLocalWL
@@ -144,6 +144,10 @@ func NewWhitelistFilterFromStrings(configParams []string) (*WhitelistFilter, err
 				localSettings = WLLocalInfraNodes
 			}
 		}
+	}
+
+	if pathToTopoFile == "" {
+		pathToTopoFile = configDir + "/" + "topology.json"
 	}
 
 	filter, err := NewWhitelistFilter(pathToTopoFile, rescanInterval,

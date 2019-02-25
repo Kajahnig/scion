@@ -136,29 +136,25 @@ func Test_NewWhitelistFilterFromStrings(t *testing.T) {
 			outsideSettings OutsideWLSetting
 			localSettings   LocalWLSetting
 		}{
-			{[]string{path_flag, "./test_topology.json", rescanInterval_flag, "60", outsideWL_flag, no_value, localWL_flag, AS_value},
-				"./test_topology.json", 60, NoOutsideWL, WLLocalAS},
-			{[]string{path_flag, "./test_topology.json", rescanInterval_flag, "3", outsideWL_flag, ISD_value, localWL_flag, infra_value},
-				"./test_topology.json", 3, WLISD, WLLocalInfraNodes},
-			{[]string{path_flag, "./test_topology.json", rescanInterval_flag, "10", outsideWL_flag, allNeighbours_value, localWL_flag, no_value},
-				"./test_topology.json", 10, WLAllNeighbours, NoLocalWL},
-			{[]string{path_flag, "./test_topology.json", rescanInterval_flag, "6000", outsideWL_flag, upAndDownNeighbours_value, localWL_flag, no_value},
-				"./test_topology.json", 6000, WLUpAndDownNeighbours, NoLocalWL},
-			{[]string{path_flag, "./test_topology.json", rescanInterval_flag, "500", outsideWL_flag, coreNeighbours_value, localWL_flag, no_value},
-				"./test_topology.json", 500, WLCoreNeighbours, NoLocalWL},
-			{[]string{path_flag, "./test_topology.json", outsideWL_flag, ISD_value, localWL_flag, infra_value},
-				"./test_topology.json", defaultRescanningInterval, WLISD, WLLocalInfraNodes},
-			{[]string{path_flag, "./test_topology.json", localWL_flag, infra_value},
-				"./test_topology.json", defaultRescanningInterval, NoOutsideWL, WLLocalInfraNodes},
-			{[]string{path_flag, "./test_topology.json", outsideWL_flag, ISD_value},
-				"./test_topology.json", defaultRescanningInterval, WLISD, NoLocalWL},
+			{[]string{path_flag, "./test_topology.json", outsideWL_flag, no_value, localWL_flag, AS_value},
+				"./test_topology.json", defaultRescanningInterval, NoOutsideWL, WLLocalAS},
+			{[]string{rescanInterval_flag, "3", outsideWL_flag, ISD_value, localWL_flag, infra_value},
+				"./topology.json", 3, WLISD, WLLocalInfraNodes},
+			{[]string{rescanInterval_flag, "6000", outsideWL_flag, allNeighbours_value, localWL_flag, no_value},
+				"./topology.json", 6000, WLAllNeighbours, NoLocalWL},
+			{[]string{outsideWL_flag, upAndDownNeighbours_value},
+				"./topology.json", defaultRescanningInterval, WLUpAndDownNeighbours, NoLocalWL},
+			{[]string{outsideWL_flag, coreNeighbours_value},
+				"./topology.json", defaultRescanningInterval, WLCoreNeighbours, NoLocalWL},
+			{[]string{localWL_flag, infra_value},
+				"./topology.json", defaultRescanningInterval, NoOutsideWL, WLLocalInfraNodes},
 		}
 
 		for _, test := range tests {
 
 			Convey(strings.Join(test.configString, " "), func() {
 
-				filter, err := NewWhitelistFilterFromStrings(test.configString)
+				filter, err := NewWhitelistFilterFromStrings(test.configString, ".")
 
 				Convey("Should not return an error", func() {
 					So(err, ShouldBeNil)
@@ -188,20 +184,19 @@ func Test_NewWhitelistFilterFromStrings(t *testing.T) {
 		tests := []struct {
 			configString []string
 		}{
-			{[]string{path_flag, "invalidPath", rescanInterval_flag, "60", outsideWL_flag, no_value, localWL_flag, AS_value}},
-			{[]string{path_flag, "./test_topology.json", rescanInterval_flag, "-3", outsideWL_flag, no_value, localWL_flag, AS_value}},
-			{[]string{path_flag, "./test_topology.json", rescanInterval_flag, "60", outsideWL_flag, no_value, localWL_flag, no_value}},
-			{[]string{rescanInterval_flag, "60", outsideWL_flag, no_value, localWL_flag, AS_value}},
-			{[]string{path_flag, "./test_topology.json", outsideWL_flag, no_value}},
-			{[]string{path_flag, "./test_topology.json", localWL_flag, no_value}},
-			{[]string{path_flag, "./test_topology.json"}},
+			{[]string{path_flag, "invalidPath", localWL_flag, AS_value}},  //invalid path to topo file
+			{[]string{rescanInterval_flag, "-3", localWL_flag, AS_value}}, //invalid value for rescanning Interval
+			{[]string{outsideWL_flag, no_value, localWL_flag, no_value}},  //no value for local and outside
+			{[]string{outsideWL_flag, no_value}},
+			{[]string{localWL_flag, no_value}},
+			{[]string{}},
 		}
 
 		for _, test := range tests {
 
 			Convey(strings.Join(test.configString, " "), func() {
 
-				filter, err := NewWhitelistFilterFromStrings(test.configString)
+				filter, err := NewWhitelistFilterFromStrings(test.configString, ".")
 
 				Convey("Should return an error and nil instead of a filter", func() {
 					So(err, ShouldNotBeNil)

@@ -21,14 +21,16 @@ import (
 	"github.com/scionproto/scion/go/lib/addr"
 	"github.com/scionproto/scion/go/lib/common"
 	"github.com/scionproto/scion/go/lib/layers"
+	"github.com/scionproto/scion/go/lib/log"
 	"github.com/scionproto/scion/go/lib/overlay"
 	"github.com/scionproto/scion/go/lib/scmp"
 	"github.com/scionproto/scion/go/lib/snet"
+	"github.com/scionproto/scion/go/lib/spath"
 )
 
-var _ snet.PacketConn = (*FilteringSCIONPacketConn)(nil)
+var _ snet.PacketConn = (*FilterPacketConn)(nil)
 
-type FilteringSCIONPacketConn struct {
+type FilterPacketConn struct {
 	conn          snet.PacketConn
 	packetFilters []*PacketFilter
 
@@ -36,19 +38,19 @@ type FilteringSCIONPacketConn struct {
 	SCMPWriteBuffer common.RawBytes
 }
 
-func NewFilteringRawScionConn(conn snet.PacketConn, packetFilters []*PacketFilter) FilteringSCIONPacketConn {
-	return FilteringSCIONPacketConn{
+func NewFilterPacketConn(conn snet.PacketConn, packetFilters []*PacketFilter) *FilterPacketConn {
+	return &FilterPacketConn{
 		conn:            conn,
 		SCMPWriteBuffer: make(common.RawBytes, common.MaxMTU),
 		packetFilters:   append([]*PacketFilter{}, packetFilters...),
 	}
 }
 
-func (c *FilteringSCIONPacketConn) Close() error {
+func (c *FilterPacketConn) Close() error {
 	return c.conn.Close()
 }
 
-func (c *FilteringSCIONPacketConn) ReadFrom(pkt *snet.SCIONPacket, ov *overlay.OverlayAddr) error {
+func (c *FilterPacketConn) ReadFrom(pkt *snet.SCIONPacket, ov *overlay.OverlayAddr) error {
 
 	err := c.conn.ReadFrom(pkt, ov)
 
@@ -64,32 +66,39 @@ func (c *FilteringSCIONPacketConn) ReadFrom(pkt *snet.SCIONPacket, ov *overlay.O
 	return err
 }
 
-func (c *FilteringSCIONPacketConn) filter(pkt *snet.SCIONPacket) (bool, error) {
+func (c *FilterPacketConn) filter(pkt *snet.SCIONPacket) (bool, error) {
 
 	for _, f := range c.packetFilters {
 		result, err := (*f).FilterPacket(pkt)
 		switch result {
 		case FilterError:
+			log.Debug("Filter encountered an error on packet from source IA "+pkt.Source.IA.String(), err)
 			return false, err
 		case FilterAccept:
-			continue
+			log.Debug("Filter accepted packet from source IA " + pkt.Source.IA.String())
 		case FilterDrop:
 			if pkt.L4Header.L4Type() == common.L4SCMP {
 				//Drop SCMP packets without sending an SCMP back
+				log.Debug("Filter dropped SCMP packet from IA " + pkt.Source.IA.String())
 				return false, nil
 			}
+			log.Debug("Filter decides to drop packet and send SCMP message to " + pkt.Source.IA.String())
 			return false, c.returnSCMPErrorMsg(pkt, (*f).SCMPError())
 		}
 	}
+	log.Debug("Packet passed all filters. Source: " + pkt.Source.IA.String())
 	return true, nil
 }
 
-func (c *FilteringSCIONPacketConn) returnSCMPErrorMsg(receivedPkt *snet.SCIONPacket, scmpCT scmp.ClassType) error {
-	path := receivedPkt.Path.Copy()
-	err := path.Reverse()
+func (c *FilterPacketConn) returnSCMPErrorMsg(receivedPkt *snet.SCIONPacket, scmpCT scmp.ClassType) error {
+	var path *spath.Path
 
-	if err != nil {
-		return err
+	if receivedPkt.Path != nil {
+		path = receivedPkt.Path.Copy()
+		err := path.Reverse()
+		if err != nil {
+			return err
+		}
 	}
 
 	var info scmp.InfoString = "Packet failed to pass filter"
@@ -122,24 +131,24 @@ func (c *FilteringSCIONPacketConn) returnSCMPErrorMsg(receivedPkt *snet.SCIONPac
 	return c.writeWithLock(SCMPErrorPkt, overlayAddress)
 }
 
-func (c *FilteringSCIONPacketConn) WriteTo(pkt *snet.SCIONPacket, ov *overlay.OverlayAddr) error {
+func (c *FilterPacketConn) WriteTo(pkt *snet.SCIONPacket, ov *overlay.OverlayAddr) error {
 	return c.writeWithLock(pkt, ov)
 }
 
-func (c *FilteringSCIONPacketConn) writeWithLock(pkt *snet.SCIONPacket, ov *overlay.OverlayAddr) error {
+func (c *FilterPacketConn) writeWithLock(pkt *snet.SCIONPacket, ov *overlay.OverlayAddr) error {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 	return c.conn.WriteTo(pkt, ov)
 }
 
-func (c *FilteringSCIONPacketConn) SetDeadline(d time.Time) error {
+func (c *FilterPacketConn) SetDeadline(d time.Time) error {
 	return c.conn.SetDeadline(d)
 }
 
-func (c *FilteringSCIONPacketConn) SetReadDeadline(d time.Time) error {
+func (c *FilterPacketConn) SetReadDeadline(d time.Time) error {
 	return c.conn.SetReadDeadline(d)
 }
 
-func (c *FilteringSCIONPacketConn) SetWriteDeadline(d time.Time) error {
+func (c *FilterPacketConn) SetWriteDeadline(d time.Time) error {
 	return c.conn.SetWriteDeadline(d)
 }
