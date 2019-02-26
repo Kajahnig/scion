@@ -20,6 +20,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/scionproto/scion/go/lib/infra/modules/filters"
 	"github.com/scionproto/scion/go/lib/integration"
 	"github.com/scionproto/scion/go/lib/log"
 	"github.com/scionproto/scion/go/lib/sciond"
@@ -44,6 +45,16 @@ func Setup() {
 	addFlags()
 	validateFlags()
 	initNetwork()
+}
+
+func SetupWithFilters(packetFilters []*filters.PacketFilter) {
+	addFlags()
+	validateFlags()
+	if Mode == ModeServer {
+		initNetworkWithFilterDispatcher(packetFilters)
+	} else {
+		initNetwork()
+	}
 }
 
 func addFlags() {
@@ -81,6 +92,14 @@ func initNetwork() {
 	// Initialize default SCION networking context
 	if err := snet.Init(Local.IA, Sciond, reliable.NewDispatcherService("")); err != nil {
 		LogFatal("Unable to initialize SCION network", "err", err)
+	}
+	log.Debug("SCION network successfully initialized")
+}
+
+func initNetworkWithFilterDispatcher(packetFilters []*filters.PacketFilter) {
+	// Initialize custom scion network with filter dispatcher
+	if err := snet.InitCustom(Local.IA, Sciond, filters.NewFilteringPacketDispatcher(packetFilters)); err != nil {
+		LogFatal("Unable to initialize custom SCION network with filter dispatcher", "err", err)
 	}
 	log.Debug("SCION network successfully initialized")
 }

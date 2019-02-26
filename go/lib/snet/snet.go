@@ -73,6 +73,14 @@ func Init(ia addr.IA, sciondPath string, dispatcher reliable.DispatcherService) 
 	return InitWithNetwork(network)
 }
 
+func InitCustom(ia addr.IA, sciondPath string, dispatcher PacketDispatcherService) error {
+	network, err := NewCustomNetwork(ia, sciondPath, dispatcher)
+	if err != nil {
+		return err
+	}
+	return InitWithNetwork(network)
+}
+
 // InitWithNetwork initializes snet with the provided SCION networking context.
 func InitWithNetwork(network *SCIONNetwork) error {
 	if DefNetwork != nil {

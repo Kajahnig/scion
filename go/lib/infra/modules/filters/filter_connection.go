@@ -15,6 +15,8 @@
 package filters
 
 import (
+	"fmt"
+	"reflect"
 	"sync"
 	"time"
 
@@ -72,21 +74,25 @@ func (c *FilterPacketConn) filter(pkt *snet.SCIONPacket) (bool, error) {
 		result, err := (*f).FilterPacket(pkt)
 		switch result {
 		case FilterError:
-			log.Debug("Filter encountered an error on packet from source IA "+pkt.Source.IA.String(), err)
+			log.Debug(fmt.Sprintf("%v encountered an error on packet from source IA %v",
+				reflect.TypeOf(*f), pkt.Source.IA.String()), err)
 			return false, err
 		case FilterAccept:
-			log.Debug("Filter accepted packet from source IA " + pkt.Source.IA.String())
+			log.Debug(fmt.Sprintf("%v accepted packet from source IA %v",
+				reflect.TypeOf(*f), pkt.Source.IA.String()))
 		case FilterDrop:
 			if pkt.L4Header.L4Type() == common.L4SCMP {
 				//Drop SCMP packets without sending an SCMP back
-				log.Debug("Filter dropped SCMP packet from IA " + pkt.Source.IA.String())
+				log.Debug(fmt.Sprintf("%v dropped SCMP packet from IA %v",
+					reflect.TypeOf(*f), pkt.Source.IA.String()))
 				return false, nil
 			}
-			log.Debug("Filter decides to drop packet and send SCMP message to " + pkt.Source.IA.String())
+			log.Debug(fmt.Sprintf("%v decides to drop packet and send SCMP message to %v",
+				reflect.TypeOf(*f), pkt.Source.IA.String()))
 			return false, c.returnSCMPErrorMsg(pkt, (*f).SCMPError())
 		}
 	}
-	log.Debug("Packet passed all filters. Source: " + pkt.Source.IA.String())
+	log.Debug(fmt.Sprintf("Packet from %v passed all filters", pkt.Source.IA.String()))
 	return true, nil
 }
 
