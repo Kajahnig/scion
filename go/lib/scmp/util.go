@@ -19,10 +19,11 @@ import (
 )
 
 var (
-	quoteBasic = []RawBlock{RawCmnHdr, RawAddrHdr, RawL4Hdr}
-	quoteAll   = append(quoteBasic, RawPathHdr, RawExtHdrs)
-	quotePath  = append(quoteBasic, RawPathHdr)
-	quoteExts  = append(quoteBasic, RawExtHdrs)
+	quoteBasic    = []RawBlock{RawCmnHdr, RawAddrHdr, RawL4Hdr}
+	quoteL4Header = []RawBlock{RawL4Hdr}
+	quoteAll      = append(quoteBasic, RawPathHdr, RawExtHdrs)
+	quotePath     = append(quoteBasic, RawPathHdr)
+	quoteExts     = append(quoteBasic, RawExtHdrs)
 )
 
 func classTypeQuotes(ct ClassType) []RawBlock {
@@ -37,6 +38,8 @@ func classTypeQuotes(ct ClassType) []RawBlock {
 		return quotePath
 	case ct.Class == C_Ext:
 		return quoteExts
+	case ct.Class == C_Filtering:
+		return quoteL4Header
 	default:
 		return nil
 	}

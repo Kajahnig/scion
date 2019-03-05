@@ -20,7 +20,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/scionproto/scion/go/lib/addr"
 	"github.com/scionproto/scion/go/lib/common"
 	"github.com/scionproto/scion/go/lib/layers"
 	"github.com/scionproto/scion/go/lib/log"
@@ -58,7 +57,7 @@ func (c *FilterPacketConn) ReadFrom(pkt *snet.SCIONPacket, ov *overlay.OverlayAd
 
 	for ; err == nil; err = c.conn.ReadFrom(pkt, ov) {
 
-		isAck, filterErr := c.filter(pkt)
+		isAck, filterErr := c.filter(pkt, ov)
 
 		if filterErr != nil || isAck {
 			return filterErr
@@ -68,7 +67,7 @@ func (c *FilterPacketConn) ReadFrom(pkt *snet.SCIONPacket, ov *overlay.OverlayAd
 	return err
 }
 
-func (c *FilterPacketConn) filter(pkt *snet.SCIONPacket) (bool, error) {
+func (c *FilterPacketConn) filter(pkt *snet.SCIONPacket, ov *overlay.OverlayAddr) (bool, error) {
 
 	for _, f := range c.packetFilters {
 		result, err := (*f).FilterPacket(pkt)
@@ -87,16 +86,19 @@ func (c *FilterPacketConn) filter(pkt *snet.SCIONPacket) (bool, error) {
 					reflect.TypeOf(*f), pkt.Source.IA.String()))
 				return false, nil
 			}
+			typeOfFilter := reflect.TypeOf(*f)
 			log.Debug(fmt.Sprintf("%v decides to drop packet and send SCMP message to %v",
-				reflect.TypeOf(*f), pkt.Source.IA.String()))
-			return false, c.returnSCMPErrorMsg(pkt, (*f).SCMPError())
+				typeOfFilter, pkt.Source.IA.String()))
+			return false, c.returnSCMPErrorMsg(pkt, (*f).SCMPError(), ov, typeOfFilter)
 		}
 	}
 	log.Debug(fmt.Sprintf("Packet from %v passed all filters", pkt.Source.IA.String()))
 	return true, nil
 }
 
-func (c *FilterPacketConn) returnSCMPErrorMsg(receivedPkt *snet.SCIONPacket, scmpCT scmp.ClassType) error {
+func (c *FilterPacketConn) returnSCMPErrorMsg(receivedPkt *snet.SCIONPacket,
+	scmpCT scmp.ClassType, ov *overlay.OverlayAddr, typeOfFilter reflect.Type) error {
+
 	var path *spath.Path
 
 	if receivedPkt.Path != nil {
@@ -108,10 +110,8 @@ func (c *FilterPacketConn) returnSCMPErrorMsg(receivedPkt *snet.SCIONPacket, scm
 	}
 
 	var info scmp.InfoString = "Packet failed to pass filter"
-	scmpMeta := scmp.Meta{InfoLen: uint8(info.Len() / common.LineLen)}
-	pld := make(common.RawBytes, scmp.MetaLen+info.Len())
-	scmpMeta.Write(pld)
-	info.Write(pld[scmp.MetaLen:])
+
+	pld := scmp.PldFromQuotes(scmpCT, info, common.L4UDP, MyQuoteFunc(receivedPkt))
 
 	SCMPErrorPkt := &snet.SCIONPacket{
 		Bytes: snet.Bytes(c.SCMPWriteBuffer),
@@ -125,16 +125,28 @@ func (c *FilterPacketConn) returnSCMPErrorMsg(receivedPkt *snet.SCIONPacket, scm
 					HopByHop: false,
 				},
 			},
-			L4Header: scmp.NewHdr(scmpCT, len(pld)),
+			L4Header: scmp.NewHdr(scmpCT, pld.Len()),
 			Payload:  pld,
 		},
 	}
-	overlayAddress, err := overlay.NewOverlayAddr(receivedPkt.Source.Host, addr.NewL4SCMPInfo())
+	log.Debug(fmt.Sprintf("Writing SCMP error message %v from %v",
+		scmpCT.String(), typeOfFilter))
+	return c.writeWithLock(SCMPErrorPkt, ov)
+}
 
-	if err != nil {
-		return err
+// GetRaw returns slices of the underlying buffer corresponding to part of the
+// packet identified by the blk argument. This is used, for example, by SCMP to
+// quote parts of the packet in an error response.
+func MyQuoteFunc(receivedPkt *snet.SCIONPacket) func(blk scmp.RawBlock) common.RawBytes {
+	return func(blk scmp.RawBlock) common.RawBytes {
+		switch blk {
+		case scmp.RawL4Hdr:
+			p := make(common.RawBytes, receivedPkt.L4Header.L4Len())
+			receivedPkt.L4Header.Write(p)
+			return p
+		}
+		return nil
 	}
-	return c.writeWithLock(SCMPErrorPkt, overlayAddress)
 }
 
 func (c *FilterPacketConn) WriteTo(pkt *snet.SCIONPacket, ov *overlay.OverlayAddr) error {

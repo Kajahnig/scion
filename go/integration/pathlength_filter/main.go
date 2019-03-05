@@ -29,6 +29,7 @@ import (
 	libint "github.com/scionproto/scion/go/lib/integration"
 	"github.com/scionproto/scion/go/lib/log"
 	"github.com/scionproto/scion/go/lib/sciond"
+	"github.com/scionproto/scion/go/lib/scmp"
 	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/lib/spath"
 )
@@ -199,9 +200,19 @@ func (c client) pong() error {
 	c.conn.SetReadDeadline(time.Now().Add(integration.DefaultIOTimeout))
 	reply := make([]byte, 1024)
 	pktLen, err := c.conn.Read(reply)
+
+	//if there is an error check if it is the correct scmp error
 	if err != nil {
+		if opErr, ok := err.(*snet.OpError); ok &&
+			opErr.SCMP().Class == scmp.C_Filtering &&
+			opErr.SCMP().Type == scmp.T_F_PathLengthNotAccepted {
+
+			log.Debug(fmt.Sprintf("Received Path Length SCMP error from %s", remote.IA))
+			return nil
+		}
 		return common.NewBasicError("Error reading packet", err)
 	}
+
 	expected := pong + remote.IA.String() + integration.Local.IA.String()
 	if string(reply[:pktLen]) != expected {
 		return common.NewBasicError("Received unexpected data", nil, "data",
