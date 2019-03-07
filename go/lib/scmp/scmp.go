@@ -110,9 +110,9 @@ const (
 	T_F_NotOnWhitelist Type = iota
 	T_F_PathLengthNotAccepted
 	T_F_ASRateLimitReached
-	T_F_HBRateLimitReached
+	T_F_HistoryRateLimitReached
 	T_F_DuplicateSuppression
-	T_F_NoDRKeySourceAuth
+	T_F_NoDRKeyAuthentication
 )
 
 var typeNameMap = map[Class][]string{
@@ -127,6 +127,8 @@ var typeNameMap = map[Class][]string{
 	},
 	C_Ext:   {"TOO_MANY_HOPBYHOP", "BAD_EXT_ORDER", "BAD_HOPBYHOP", "BAD_END2END"},
 	C_Sibra: {"BAD_VERSION", "SETUP_NO_REQ"},
+	C_Filtering: {"NOT_ON_WHITELIST", "PATH_LENGTH_NOT_ACCEPTED", "AS_RATE_LIMIT_REACHED",
+		"HISTORY_RATE_LIMIT_REACHED", "DUPLICATE_SUPPRESSION", "NO_DRKEY_AUTHENTICATION"},
 }
 
 func (t Type) Name(c Class) string {

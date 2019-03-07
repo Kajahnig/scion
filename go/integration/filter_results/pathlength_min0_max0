@@ -1,0 +1,9 @@
+1-ff00:0:110    1-ff00:0:110    no
+1-ff00:0:110    1-ff00:0:111    pathLength
+1-ff00:0:110    1-ff00:0:112    pathLength
+1-ff00:0:111    1-ff00:0:110    pathLength
+1-ff00:0:111    1-ff00:0:111    no
+1-ff00:0:111    1-ff00:0:112    pathLength
+1-ff00:0:112    1-ff00:0:110    pathLength
+1-ff00:0:112    1-ff00:0:111    pathLength
+1-ff00:0:112    1-ff00:0:112    no

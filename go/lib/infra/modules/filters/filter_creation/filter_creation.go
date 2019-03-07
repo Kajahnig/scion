@@ -28,10 +28,10 @@ import (
 	"github.com/scionproto/scion/go/lib/log"
 )
 
-var (
-	whitelist  = "whitelist"
-	pathLength = "pathLength"
-	comment    = "//"
+const (
+	Whitelist  = "whitelist"
+	PathLength = "pathLength"
+	Comment    = "//"
 )
 
 func CreateFiltersFromConfigFile(configDir string, configFileName string) ([]*filters.PacketFilter, error) {
@@ -72,12 +72,12 @@ func createFilter(filterConfig string, configDir string) (*filters.PacketFilter,
 	var err error
 
 	switch configParams[0] {
-	case whitelist:
+	case Whitelist:
 		filter, err = whitelisting.NewWhitelistFilterFromStrings(configParams[1:], configDir)
-	case pathLength:
+	case PathLength:
 		filter, err = path_length.NewPathLengthFilterFromStrings(configParams[1:])
 	default:
-		if strings.HasPrefix(configParams[0], comment) {
+		if strings.HasPrefix(configParams[0], Comment) {
 			return nil, nil, false
 		}
 		err = common.NewBasicError("No matching filter found for configuration", nil, "line", filterConfig)

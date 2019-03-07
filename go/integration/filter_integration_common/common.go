@@ -1,4 +1,4 @@
-// Copyright 2018 ETH Zurich
+// Copyright 2019 ETH Zurich
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package integration
+package filter_integration_common
 
 import (
 	"flag"
@@ -44,16 +44,8 @@ var (
 	ConfigFileName string
 )
 
-func Setup() {
-	addFlags()
-	validateFlags()
-	initNetwork()
-}
-
 func SetupWithFilters() {
 	addFlags()
-	addFilterFlags()
-	validateFlags()
 	validateFilterFlags()
 	if Mode == ModeServer {
 		initNetworkWithFilterDispatcher()
@@ -68,14 +60,11 @@ func addFlags() {
 	flag.StringVar(&Sciond, "sciond", "", "Path to sciond socket")
 	flag.IntVar(&Attempts, "attempts", 1, "Number of attempts before giving up")
 	log.AddLogConsFlags()
-}
-
-func addFilterFlags() {
 	flag.StringVar(&ConfigFileName, "config", "",
 		"(Mandatory for servers) Name of the filter config file in "+FilterConfigDir)
 }
 
-func validateFlags() {
+func validateFilterFlags() {
 	flag.Parse()
 	if err := log.SetupFromFlags(""); err != nil {
 		fmt.Fprintf(os.Stderr, "ERROR: %s", err)
@@ -95,11 +84,6 @@ func validateFlags() {
 		if Local.Host.L4 == nil {
 			LogFatal("Missing local port")
 		}
-	}
-}
-
-func validateFilterFlags() {
-	if Mode == ModeServer {
 		if ConfigFileName == "" {
 			LogFatal("Missing filter config file")
 		}

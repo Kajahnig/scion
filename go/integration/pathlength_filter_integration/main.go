@@ -21,21 +21,30 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/scionproto/scion/go/lib/common"
 	"github.com/scionproto/scion/go/lib/integration"
 	"github.com/scionproto/scion/go/lib/log"
 )
 
 var (
-	name     = "pathlength_filter_integration"
-	cmd      = "./bin/pathlength_filter"
-	attempts = flag.Int("attempts", 1, "Number of attempts before giving up.")
+	name                = "pathlength_filter_integration"
+	cmd                 = "./bin/filter_common"
+	attempts            = flag.Int("attempts", 1, "Number of attempts before giving up.")
+	configAndResultName = []string{"pathlength_min0_max0"} //, "pathlength_min0_max1"}
 )
 
 func main() {
-	os.Exit(realMain())
+	var errorCounter = 0
+	for _, testFileName := range configAndResultName {
+		errorCounter += realMain(testFileName)
+	}
+	if errorCounter > 0 {
+		os.Exit(1)
+	}
+	os.Exit(0)
 }
 
-func realMain() int {
+func realMain(testFileName string) int {
 	if err := integration.Init(name); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to init: %s\n", err)
 		return 1
@@ -44,12 +53,14 @@ func realMain() int {
 	defer log.Flush()
 	clientArgs := []string{"-log.console", "debug", "-attempts", strconv.Itoa(*attempts),
 		"-local", integration.SrcAddrPattern + ":0",
-		"-remote", integration.DstAddrPattern + ":" + integration.ServerPortReplace}
+		"-remote", integration.DstAddrPattern + ":" + integration.ServerPortReplace,
+		"-results", testFileName}
 	serverArgs := []string{"-log.console", "debug", "-mode", "server",
-		"-local", integration.DstAddrPattern + ":0"}
+		"-local", integration.DstAddrPattern + ":0",
+		"-config", testFileName}
 	in := integration.NewBinaryIntegration(name, cmd, clientArgs, serverArgs)
 	if err := runTests(in, integration.IAPairs(integration.DispAddr)); err != nil {
-		log.Error("Error during tests", "err", err)
+		log.Error("Error during tests: " + err.Error())
 		return 1
 	}
 	return 0
@@ -65,19 +76,23 @@ func runTests(in integration.Integration, pairs []integration.IAPair) error {
 			s, err := integration.StartServer(in, dst)
 			if err != nil {
 				log.Error(fmt.Sprintf("Error in server: %s", dst.String()), "err", err)
-				return err
+				return common.NewBasicError(fmt.Sprintf("Server %s exited with an error", dst.String()), nil)
 			}
 			defer s.Close()
 		}
 		// Now start the clients for srcDest pair
+		errorCount := 0
 		for i, conn := range pairs {
 			testInfo := fmt.Sprintf("%v -> %v (%v/%v)", conn.Src.IA, conn.Dst.IA, i+1, len(pairs))
 			log.Info(fmt.Sprintf("Test %v: %s", in.Name(), testInfo))
 			t := integration.DefaultRunTimeout + integration.CtxTimeout*time.Duration(*attempts)
 			if err := integration.RunClient(in, conn, t); err != nil {
 				log.Error(fmt.Sprintf("Error in client: %s", testInfo), "err", err)
-				return err
+				errorCount++
 			}
+		}
+		if errorCount != 0 {
+			return common.NewBasicError(fmt.Sprintf("%v clients exited with an error", errorCount), nil)
 		}
 		return nil
 	})
