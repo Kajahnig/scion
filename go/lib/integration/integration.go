@@ -102,6 +102,13 @@ func Init(name string) error {
 	return validateFlags(name)
 }
 
+func InitWithGivenIAs(name, sourceIAs, destinationIAs string) error {
+	addTestFlags()
+	srcIAs.Set(sourceIAs)
+	dstIAs.Set(destinationIAs)
+	return validateFlags(name)
+}
+
 func addTestFlags() {
 	log.ConsoleLevel = "info"
 	log.AddLogConsFlags()
