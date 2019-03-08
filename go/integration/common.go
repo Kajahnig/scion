@@ -20,8 +20,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/scionproto/scion/go/lib/infra/modules/filters"
-	"github.com/scionproto/scion/go/lib/infra/modules/filters/filter_creation"
 	"github.com/scionproto/scion/go/lib/integration"
 	"github.com/scionproto/scion/go/lib/log"
 	"github.com/scionproto/scion/go/lib/sciond"
@@ -33,15 +31,13 @@ const (
 	ModeServer       = "server"
 	ModeClient       = "client"
 	DefaultIOTimeout = 1 * time.Second
-	FilterConfigDir  = "./go/integration/filter_configs"
 )
 
 var (
-	Local          snet.Addr
-	Mode           string
-	Sciond         string
-	Attempts       int
-	ConfigFileName string
+	Local    snet.Addr
+	Mode     string
+	Sciond   string
+	Attempts int
 )
 
 func Setup() {
@@ -50,29 +46,12 @@ func Setup() {
 	initNetwork()
 }
 
-func SetupWithFilters() {
-	addFlags()
-	addFilterFlags()
-	validateFlags()
-	validateFilterFlags()
-	if Mode == ModeServer {
-		initNetworkWithFilterDispatcher()
-	} else {
-		initNetwork()
-	}
-}
-
 func addFlags() {
 	flag.Var((*snet.Addr)(&Local), "local", "(Mandatory) address to listen on")
 	flag.StringVar(&Mode, "mode", ModeClient, "Run in "+ModeClient+" or "+ModeServer+" mode")
 	flag.StringVar(&Sciond, "sciond", "", "Path to sciond socket")
 	flag.IntVar(&Attempts, "attempts", 1, "Number of attempts before giving up")
 	log.AddLogConsFlags()
-}
-
-func addFilterFlags() {
-	flag.StringVar(&ConfigFileName, "config", "",
-		"(Mandatory for servers) Name of the filter config file in "+FilterConfigDir)
 }
 
 func validateFlags() {
@@ -98,38 +77,12 @@ func validateFlags() {
 	}
 }
 
-func validateFilterFlags() {
-	if Mode == ModeServer {
-		if ConfigFileName == "" {
-			LogFatal("Missing filter config file")
-		}
-	}
-}
-
 func initNetwork() {
 	// Initialize default SCION networking context
 	if err := snet.Init(Local.IA, Sciond, reliable.NewDispatcherService("")); err != nil {
 		LogFatal("Unable to initialize SCION network", "err", err)
 	}
 	log.Debug("SCION network successfully initialized")
-}
-
-func initNetworkWithFilterDispatcher() {
-	// Initialize custom scion network with filter dispatcher
-	err := snet.InitCustom(Local.IA, Sciond, filters.NewFilteringPacketDispatcher(createFilters()))
-
-	if err != nil {
-		LogFatal("Unable to initialize custom SCION network with filter dispatcher", "err", err)
-	}
-	log.Debug("SCION network successfully initialized")
-}
-
-func createFilters() []*filters.PacketFilter {
-	filters, err := filter_creation.CreateFiltersFromConfigFile(FilterConfigDir, ConfigFileName)
-	if err != nil {
-		LogFatal("Unable to create filters", "err", err)
-	}
-	return filters
 }
 
 // AttemptFunc attempts a request repeatedly, receives the attempt number

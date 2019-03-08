@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/scionproto/scion/go/integration/filter_integration_common"
+	"github.com/scionproto/scion/go/integration"
 	"github.com/scionproto/scion/go/lib/addr"
 	"github.com/scionproto/scion/go/lib/common"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/filter_creation"
@@ -55,9 +55,9 @@ func realMain() int {
 	defer log.LogPanicAndExit()
 	defer log.Flush()
 	addFlags()
-	filter_integration_common.SetupWithFilters()
+	integration.SetupWithFilters()
 	validateFlags()
-	if filter_integration_common.Mode == filter_integration_common.ModeServer {
+	if integration.Mode == integration.ModeServer {
 		server{}.run()
 		return 0
 	} else {
@@ -72,18 +72,18 @@ func addFlags() {
 }
 
 func validateFlags() {
-	if filter_integration_common.Mode == filter_integration_common.ModeClient {
+	if integration.Mode == integration.ModeClient {
 		if remote.Host == nil {
-			filter_integration_common.LogFatal("Missing remote address")
+			integration.LogFatal("Missing remote address")
 		}
 		if remote.Host.L4 == nil {
-			filter_integration_common.LogFatal("Missing remote port")
+			integration.LogFatal("Missing remote port")
 		}
 		if remote.Host.L4.Port() == 0 {
-			filter_integration_common.LogFatal("Invalid remote port", "remote port", remote.Host.L4.Port())
+			integration.LogFatal("Invalid remote port", "remote port", remote.Host.L4.Port())
 		}
 		if resultFileName == "" {
-			filter_integration_common.LogFatal("Missing results file")
+			integration.LogFatal("Missing results file")
 		}
 	}
 }
@@ -93,14 +93,14 @@ type server struct {
 }
 
 func (s server) run() {
-	conn, err := snet.ListenSCION("udp4", &filter_integration_common.Local)
+	conn, err := snet.ListenSCION("udp4", &integration.Local)
 	if err != nil {
-		filter_integration_common.LogFatal("Error listening", "err", err)
+		integration.LogFatal("Error listening", "err", err)
 	}
 	if len(os.Getenv(libint.GoIntegrationEnv)) > 0 {
 		// Needed for integration test ready signal.
 		fmt.Printf("Port=%d\n", conn.LocalAddr().(*snet.Addr).Host.L4.Port())
-		fmt.Printf("%s%s\n", libint.ReadySignal, filter_integration_common.Local.IA)
+		fmt.Printf("%s%s\n", libint.ReadySignal, integration.Local.IA)
 	}
 	log.Debug("Listening", "local", conn.LocalAddr())
 	// Receive ping message
@@ -111,15 +111,15 @@ func (s server) run() {
 			log.Error("Error reading packet", "err", err)
 			continue
 		}
-		if string(b[:pktLen]) != pingMessageString(filter_integration_common.Local.IA) {
-			filter_integration_common.LogFatal("Received unexpected data", "data", b[:pktLen])
+		if string(b[:pktLen]) != pingMessageString(integration.Local.IA) {
+			integration.LogFatal("Received unexpected data", "data", b[:pktLen])
 		}
 		log.Debug(fmt.Sprintf("Ping received from %s, sending pong.", addr))
 		// Send pong
-		reply := pongMessage(filter_integration_common.Local.IA, addr.IA)
+		reply := pongMessage(integration.Local.IA, addr.IA)
 		_, err = conn.WriteToSCION(reply, addr)
 		if err != nil {
-			filter_integration_common.LogFatal("Unable to send reply", "err", err)
+			integration.LogFatal("Unable to send reply", "err", err)
 		}
 		log.Debug(fmt.Sprintf("Sent pong to %s", addr.Desc()))
 	}
@@ -135,9 +135,9 @@ type client struct {
 func (c client) run() int {
 	var err error
 
-	c.conn, err = snet.ListenSCION("udp4", &filter_integration_common.Local)
+	c.conn, err = snet.ListenSCION("udp4", &integration.Local)
 	if err != nil {
-		filter_integration_common.LogFatal("Unable to listen", "err", err)
+		integration.LogFatal("Unable to listen", "err", err)
 	}
 	log.Debug("Send on", "local", c.conn.LocalAddr())
 
@@ -145,10 +145,10 @@ func (c client) run() int {
 
 	c.expectsError, c.resultType, err = determineExpectedResult()
 	if err != nil {
-		filter_integration_common.LogFatal("Unable to retrieve expected result", "err", err)
+		integration.LogFatal("Unable to retrieve expected result", "err", err)
 	}
 
-	return filter_integration_common.AttemptRepeatedly("End2End", c.attemptRequest)
+	return integration.AttemptRepeatedly("End2End", c.attemptRequest)
 }
 
 func (c client) attemptRequest(n int) bool {
@@ -169,20 +169,20 @@ func (c client) ping(n int) error {
 	if err := c.getRemote(n); err != nil {
 		return err
 	}
-	c.conn.SetWriteDeadline(time.Now().Add(filter_integration_common.DefaultIOTimeout))
+	c.conn.SetWriteDeadline(time.Now().Add(integration.DefaultIOTimeout))
 	b := pingMessage(remote.IA)
 	_, err := c.conn.WriteTo(b, &remote)
 	return err
 }
 
 func (c client) getRemote(n int) error {
-	if remote.IA.Equal(filter_integration_common.Local.IA) {
+	if remote.IA.Equal(integration.Local.IA) {
 		return nil
 	}
 	// Get paths from sciond
 	ctx, cancelF := context.WithTimeout(context.Background(), libint.CtxTimeout)
 	defer cancelF()
-	paths, err := c.sdConn.Paths(ctx, remote.IA, filter_integration_common.Local.IA, 1,
+	paths, err := c.sdConn.Paths(ctx, remote.IA, integration.Local.IA, 1,
 		sciond.PathReqFlags{Refresh: n != 0})
 	if err != nil {
 		return common.NewBasicError("Error requesting paths", err)
@@ -205,7 +205,7 @@ func (c client) getRemote(n int) error {
 }
 
 func (c client) pong() error {
-	c.conn.SetReadDeadline(time.Now().Add(filter_integration_common.DefaultIOTimeout))
+	c.conn.SetReadDeadline(time.Now().Add(integration.DefaultIOTimeout))
 	reply := make([]byte, 1024)
 	pktLen, err := c.conn.Read(reply)
 
@@ -228,7 +228,7 @@ func determineExpectedResult() (bool, scmp.Type, error) {
 	}
 	defer configFile.Close()
 
-	localIAString := filter_integration_common.Local.IA.String()
+	localIAString := integration.Local.IA.String()
 	remoteIAString := remote.IA.String()
 
 	scanner := bufio.NewScanner(configFile)
@@ -276,7 +276,7 @@ func checkForExpectedSCMPError(err error, t scmp.Type) error {
 }
 
 func checkForPongMessage(reply string) error {
-	expected := pongMessageString(remote.IA, filter_integration_common.Local.IA)
+	expected := pongMessageString(remote.IA, integration.Local.IA)
 	if reply != expected {
 		return common.NewBasicError("Received unexpected data", nil, "data",
 			reply, "expected", expected)
