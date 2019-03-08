@@ -168,21 +168,21 @@ var pathLengthTests = []struct {
 	{
 		[]pathCase{{true, []uint8{11, 12}}},
 		[][2]int{{0, 8}, {0, 16}},
-		2,
+		1,
 		"1 segment",
 	},
 	// 1 segment, 5 hops
 	{
 		[]pathCase{{true, []uint8{11, 12, 13, 14, 15}}},
 		[][2]int{{0, 24}, {0, 32}},
-		5,
+		4,
 		"1 segment",
 	},
 	// 2 segments, 5 hops
 	{
 		[]pathCase{{true, []uint8{11, 12}}, {false, []uint8{13, 14, 15}}},
 		[][2]int{{0, 8}, {24, 48}},
-		5,
+		3,
 		"2 segments",
 	},
 	// 3 segments, 9 hops
@@ -195,7 +195,7 @@ var pathLengthTests = []struct {
 		[][2]int{
 			{0, 8}, {24, 40}, {64, 88},
 		},
-		9,
+		6,
 		"3 segments",
 	},
 }
@@ -227,8 +227,8 @@ func Test_determinePathLength(t *testing.T) {
 	})
 }
 
-var pathOfLength2 = mkPathRevCase([]pathCase{{true, []uint8{11, 12}}}, 0, 8)
-var pathOfLength5 = mkPathRevCase([]pathCase{{true, []uint8{11, 12, 13, 14, 15}}}, 0, 32)
+var pathOfLength2 = mkPathRevCase([]pathCase{{true, []uint8{11, 12, 13}}}, 0, 8)
+var pathOfLength5 = mkPathRevCase([]pathCase{{true, []uint8{11, 12, 13, 14, 15, 16}}}, 0, 32)
 
 var pathFilteringSettings = []struct {
 	minPathLength int

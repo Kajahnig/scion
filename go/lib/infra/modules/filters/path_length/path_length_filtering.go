@@ -17,6 +17,7 @@ package path_length
 import (
 	"github.com/scionproto/scion/go/lib/common"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters"
+	"github.com/scionproto/scion/go/lib/log"
 	"github.com/scionproto/scion/go/lib/scmp"
 	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/lib/spath"
@@ -125,7 +126,7 @@ func (f *PathLengthFilter) determinePathLength(path *spath.Path) (int, error) {
 			return -1, err
 		}
 		offset += spath.InfoFieldLength + int(infoField.Hops)*spath.HopFieldLength
-		pathLength += int(infoField.Hops)
+		pathLength += int(infoField.Hops) - 1
 
 		if offset == len(path.Raw) {
 			break
@@ -134,6 +135,6 @@ func (f *PathLengthFilter) determinePathLength(path *spath.Path) (int, error) {
 				"currOff", offset, "max", len(path.Raw))
 		}
 	}
-
+	log.Debug("Pathlength filter determined", "pathlength", pathLength)
 	return pathLength, nil
 }
