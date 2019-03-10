@@ -1,0 +1,19 @@
+//results for the default topology with the config filter_configs/pathlength_min1_max2
+//requests to server in AS 120
+1-ff00:0:110    1-ff00:0:120    no
+1-ff00:0:111    1-ff00:0:120    no
+1-ff00:0:120    1-ff00:0:120    pathLength
+1-ff00:0:130    1-ff00:0:120    no
+1-ff00:0:132    1-ff00:0:120    pathLength
+2-ff00:0:210    1-ff00:0:120    no
+2-ff00:0:220    1-ff00:0:120    no
+2-ff00:0:221    1-ff00:0:120    no
+//requests for server in AS 111
+1-ff00:0:111    1-ff00:0:111    pathLength
+1-ff00:0:112    1-ff00:0:111    no
+1-ff00:0:120    1-ff00:0:111    no
+1-ff00:0:121    1-ff00:0:111    no
+1-ff00:0:122    1-ff00:0:111    no
+1-ff00:0:132    1-ff00:0:111    pathLength
+2-ff00:0:211    1-ff00:0:111    no
+2-ff00:0:220    1-ff00:0:111    no

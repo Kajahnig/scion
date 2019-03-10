@@ -234,6 +234,9 @@ func determineExpectedResult() (bool, scmp.Type, error) {
 	scanner := bufio.NewScanner(configFile)
 	for scanner.Scan() {
 		resultParams := strings.Fields(scanner.Text())
+		if len(resultParams) == 0 || strings.HasPrefix(resultParams[0], "//") {
+			continue
+		}
 		if resultParams[0] == localIAString &&
 			resultParams[1] == remoteIAString {
 			switch resultParams[2] {

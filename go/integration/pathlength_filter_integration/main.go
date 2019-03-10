@@ -15,7 +15,6 @@
 package main
 
 import (
-	"log"
 	"os"
 	"os/exec"
 )
@@ -24,12 +23,26 @@ var (
 	cmd                 = "./bin/filter_integration_base"
 	configAndResultName = []string{"pathlength_min0_max0", "pathlength_min0_max1", "pathlength_min0_max2",
 		"pathlength_min1_max1", "pathlength_min1_max2", "pathlength_min2_max2"}
+
+	AS120         = "1-ff00:0:120"
+	srcASesFor120 = "1-ff00:0:110,1-ff00:0:111,1-ff00:0:120,1-ff00:0:130,1-ff00:0:132," +
+		"2-ff00:0:220,2-ff00:0:210,2-ff00:0:221"
+	AS111         = "1-ff00:0:111"
+	srcASesFor111 = "1-ff00:0:111,1-ff00:0:112,1-ff00:0:120,1-ff00:0:121,1-ff00:0:122,1-ff00:0:132," +
+		"2-ff00:0:220,2-ff00:0:211"
 )
 
 func main() {
 	var errorCounter = 0
 	for _, fileName := range configAndResultName {
-		err := RunClient(fileName)
+		err := RunClient(fileName, srcASesFor120, AS120)
+		if err != nil {
+			errorCounter += 1
+		}
+	}
+
+	for _, fileName := range configAndResultName {
+		err := RunClient(fileName, srcASesFor111, AS111)
 		if err != nil {
 			errorCounter += 1
 		}
@@ -41,15 +54,11 @@ func main() {
 	os.Exit(0)
 }
 
-func RunClient(configFileName string) error {
-	command := exec.Command(cmd, "-filename", configFileName, "-srcASes", "1-ff00:0:110,1-ff00:0:111")
+func RunClient(configFileName, srcASes, dstASes string) error {
+	command := exec.Command(cmd, "-filename", configFileName, "-srcIAs", srcASes, "-dstIAs", dstASes)
 
 	command.Stdout = os.Stdout
 	command.Stderr = os.Stdout
 
-	if err := command.Run(); err != nil {
-		log.Fatal(err)
-	}
-
-	return nil
+	return command.Run()
 }

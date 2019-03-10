@@ -31,8 +31,8 @@ var (
 	cmd          = "./bin/filter_base"
 	attempts     = flag.Int("attempts", 1, "Number of attempts before giving up.")
 	testFileName = flag.String("filename", "", "Name of the result and config files.")
-	srcASList    = flag.String("srcASes", "", "Comma separated list of source ASes (clients).")
-	dstASList    = flag.String("dstASes", "", "Comma separated list of destination ASes (servers).")
+	srcASList    = flag.String("srcIAs", "", "Comma separated list of source IAs (clients).")
+	dstASList    = flag.String("dstIAs", "", "Comma separated list of destination IAs (servers).")
 )
 
 func main() {
