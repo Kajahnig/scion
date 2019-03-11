@@ -16,12 +16,12 @@ package path_length
 
 import (
 	"fmt"
+	"github.com/scionproto/scion/go/border/braccept/tpkt"
 	"strings"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
 
-	"github.com/scionproto/scion/go/lib/common"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters"
 	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/lib/spath"
@@ -91,7 +91,7 @@ func Test_NewPathLengthFilter(t *testing.T) {
 
 func Test_NewPathLengthFilterFromStrings(t *testing.T) {
 
-	Convey("Creating a whitelisting filter with the strings", t, func() {
+	Convey("Creating a path length filter with the strings", t, func() {
 
 		tests := []struct {
 			configString []string
@@ -154,49 +154,64 @@ func Test_NewPathLengthFilterFromStrings(t *testing.T) {
 }
 
 type pathCase struct {
-	consDir bool
-	hops    []uint8
+	hops            []uint8
+	shortcut        bool
+	peeringShortcut bool
 }
 
 var pathLengthTests = []struct {
 	in                  []pathCase
-	inOffs              [][2]int
 	resultingPathLength int
 	numberOfSegments    string
 }{
-	// 1 segment, 2 hops
+	// 1 segment, 2 hops    case 1c/1d from the book
 	{
-		[]pathCase{{true, []uint8{11, 12}}},
-		[][2]int{{0, 8}, {0, 16}},
+		[]pathCase{{[]uint8{1, 2}, false, false}},
 		1,
 		"1 segment",
 	},
-	// 1 segment, 5 hops
+	// 1 segment, 5 hops 	case 1c/1d from the book
 	{
-		[]pathCase{{true, []uint8{11, 12, 13, 14, 15}}},
-		[][2]int{{0, 24}, {0, 32}},
+		[]pathCase{{[]uint8{1, 2, 3, 4, 5}, false, false}},
 		4,
 		"1 segment",
 	},
-	// 2 segments, 5 hops
+	// 2 segments, 5 hops	case 1b/1e from the book
 	{
-		[]pathCase{{true, []uint8{11, 12}}, {false, []uint8{13, 14, 15}}},
-		[][2]int{{0, 8}, {24, 48}},
+		[]pathCase{{[]uint8{1, 12}, false, false},
+			{[]uint8{3, 4, 5}, false, false}},
 		3,
 		"2 segments",
 	},
-	// 3 segments, 9 hops
+	// 3 segments, 9 hops	case 1a from the book
 	{
 		[]pathCase{
-			{true, []uint8{11, 12}},
-			{false, []uint8{13, 14, 15, 16}},
-			{false, []uint8{17, 18, 19}},
-		},
-		[][2]int{
-			{0, 8}, {24, 40}, {64, 88},
+			{[]uint8{1, 12}, false, false},
+			{[]uint8{3, 4, 5, 16}, false, false},
+			{[]uint8{7, 8, 9}, false, false},
 		},
 		6,
 		"3 segments",
+	},
+	// case 2 from the book : peering shortcut
+	{
+		[]pathCase{{[]uint8{1, 12, 23}, false, true},
+			{[]uint8{24, 15, 6}, false, true}},
+		3,
+		"a peering shortcut",
+	},
+	// case 3 from the book: non peering shortcut
+	{
+		[]pathCase{{[]uint8{1, 12, 23}, true, false},
+			{[]uint8{24, 15, 6}, true, false}},
+		2,
+		"a non peering shortcut",
+	},
+	// case 4 from the book: on path
+	{
+		[]pathCase{{[]uint8{1, 2, 3, 24, 25}, false, false}},
+		2,
+		"on-path destination AS",
 	},
 }
 
@@ -207,28 +222,24 @@ func Test_determinePathLength(t *testing.T) {
 		filter, _ := NewPathLengthFilter(0, 0)
 
 		for _, c := range pathLengthTests {
-			for j := range c.inOffs {
-				path := mkPathRevCase(c.in, c.inOffs[j][0], c.inOffs[j][1])
-				Convey(fmt.Sprintf("With %v, info field offset %v and hop field offset %v",
-					c.numberOfSegments, path.InfOff, path.HopOff), func() {
+			path := mkPathRevCase(c.in)
+			Convey(fmt.Sprintf("With %v, path: %v\n", c.numberOfSegments, c.in), func() {
+				pathLength, err := filter.determinePathLength(path)
 
-					pathLength, err := filter.determinePathLength(path)
-
-					Convey("Should not return an error", func() {
-						So(err, ShouldBeNil)
-					})
-
-					Convey("Should return the correct path length", func() {
-						So(pathLength, ShouldEqual, c.resultingPathLength)
-					})
+				Convey("Should not return an error\n", func() {
+					So(err, ShouldBeNil)
 				})
-			}
+
+				Convey(fmt.Sprintf("Should return the path length %v", c.resultingPathLength), func() {
+					So(pathLength, ShouldEqual, c.resultingPathLength)
+				})
+			})
 		}
 	})
 }
 
-var pathOfLength2 = mkPathRevCase([]pathCase{{true, []uint8{11, 12, 13}}}, 0, 8)
-var pathOfLength5 = mkPathRevCase([]pathCase{{true, []uint8{11, 12, 13, 14, 15, 16}}}, 0, 32)
+var pathOfLength2 = mkPathRevCase([]pathCase{{[]uint8{1, 2, 3}, false, false}})
+var pathOfLength5 = mkPathRevCase([]pathCase{{[]uint8{1, 2, 3, 4, 5, 6}, false, false}})
 
 var pathFilteringSettings = []struct {
 	minPathLength int
@@ -294,27 +305,38 @@ func Test_FilterPacket(t *testing.T) {
 	}
 }
 
-func mkPathRevCase(in []pathCase, inInfOff, inHopfOff int) *spath.Path {
-	path := &spath.Path{InfOff: inInfOff, HopOff: inHopfOff}
-	plen := 0
+func mkPathRevCase(in []pathCase) *spath.Path {
+	segments := make([]*tpkt.Segment, 0)
+
 	for _, seg := range in {
-		plen += spath.InfoFieldLength + len(seg.hops)*spath.HopFieldLength
+		segments = append(segments, makeSeg(seg))
 	}
-	path.Raw = make(common.RawBytes, plen)
-	offset := 0
-	for i, seg := range in {
-		makeSeg(path.Raw[offset:], seg.consDir, uint16(i), seg.hops)
-		offset += spath.InfoFieldLength + len(seg.hops)*spath.HopFieldLength
-	}
-	return path
+
+	path := tpkt.GenPath(0, 8, segments)
+	return &path.Path
 }
 
-func makeSeg(b common.RawBytes, consDir bool, isd uint16, hops []uint8) {
-	infof := spath.InfoField{ConsDir: consDir, ISD: isd, Hops: uint8(len(hops))}
-	infof.Write(b)
-	for i, hop := range hops {
-		for j := 0; j < spath.HopFieldLength; j++ {
-			b[spath.InfoFieldLength+i*spath.HopFieldLength+j] = hop
-		}
+func makeSeg(pc pathCase) *tpkt.Segment {
+
+	infoField := &spath.InfoField{
+		ConsDir:  false,
+		Shortcut: pc.shortcut,
+		Peer:     pc.peeringShortcut,
+		TsInt:    0,
+		ISD:      1,
+		Hops:     uint8(len(pc.hops)),
+	}
+	hopFields := make([]*spath.HopField, 0)
+	for _, hopNr := range pc.hops {
+		hopFields = append(hopFields, makeHopField(hopNr))
+	}
+
+	return tpkt.NewSegment(infoField, hopFields)
+}
+
+func makeHopField(hopNr uint8) *spath.HopField {
+	return &spath.HopField{
+		Xover:      hopNr >= 10 && hopNr < 20,
+		VerifyOnly: hopNr >= 20,
 	}
 }

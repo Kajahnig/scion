@@ -17,7 +17,6 @@ package path_length
 import (
 	"github.com/scionproto/scion/go/lib/common"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters"
-	"github.com/scionproto/scion/go/lib/log"
 	"github.com/scionproto/scion/go/lib/scmp"
 	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/lib/spath"
@@ -118,23 +117,47 @@ func (f *PathLengthFilter) determinePathLength(path *spath.Path) (int, error) {
 	}
 
 	var offset = 0
-	var pathLength int = 0
+	var pathLength = 0
 
 	for i := 0; i < 3; i++ {
 		infoField, err := spath.InfoFFromRaw(path.Raw[offset:])
 		if err != nil {
 			return -1, err
 		}
-		offset += spath.InfoFieldLength + int(infoField.Hops)*spath.HopFieldLength
-		pathLength += int(infoField.Hops) - 1
-
-		if offset == len(path.Raw) {
-			break
-		} else if offset > len(path.Raw) {
+		segLen := spath.InfoFieldLength + int(infoField.Hops)*spath.HopFieldLength
+		endOfSegment := offset + segLen
+		if endOfSegment > len(path.Raw) {
 			return -1, common.NewBasicError("Unable to determine length of corrupt path", nil,
 				"currOff", offset, "max", len(path.Raw))
 		}
+		hopFieldCounter := 0
+		firstXover := true
+		for offset += spath.InfoFieldLength; offset < endOfSegment; offset += spath.HopFieldLength {
+			hop, err := spath.HopFFromRaw(path.Raw[offset:])
+			if err != nil {
+				return -1, err
+			}
+			if !hop.VerifyOnly {
+				if hop.Xover {
+					if firstXover {
+						firstXover = false
+						hopFieldCounter += 1
+					}
+				} else {
+					hopFieldCounter += 1
+				}
+			}
+		}
+
+		if i == 0 && infoField.Peer {
+			hopFieldCounter += 1
+		}
+		pathLength += hopFieldCounter - 1
+		offset = endOfSegment
+
+		if offset == len(path.Raw) {
+			break
+		}
 	}
-	log.Debug("Pathlength filter determined", "pathlength", pathLength)
 	return pathLength, nil
 }

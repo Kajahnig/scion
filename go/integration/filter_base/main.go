@@ -148,7 +148,7 @@ func (c client) run() int {
 		integration.LogFatal("Unable to retrieve expected result", "err", err)
 	}
 
-	return integration.AttemptRepeatedly("End2End", c.attemptRequest)
+	return integration.AttemptRepeatedly("PathLengthFilter", c.attemptRequest)
 }
 
 func (c client) attemptRequest(n int) bool {
