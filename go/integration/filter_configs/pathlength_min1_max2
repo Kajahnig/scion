@@ -1,2 +1,2 @@
-//A path length filter with default min path length 1 and max 2
+//A path length filter with min path length 1 and max 2
 pathLength -min 1 -max 2

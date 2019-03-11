@@ -1,0 +1,4 @@
+//A whitelist filter with
+//Outside filtering set to the default (no whitelist)
+//And local filtering set to let all packets from the local AS pass
+whitelist -path ./gen/ISD1/ASff00_0_120/br1-ff00_0_120-1/topology.json -local AS
