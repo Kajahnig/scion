@@ -16,12 +16,12 @@ package path_length
 
 import (
 	"fmt"
-	"github.com/scionproto/scion/go/border/braccept/tpkt"
 	"strings"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
 
+	"github.com/scionproto/scion/go/border/braccept/tpkt"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters"
 	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/lib/spath"
