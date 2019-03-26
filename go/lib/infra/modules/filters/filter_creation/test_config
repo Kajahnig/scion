@@ -6,3 +6,6 @@ whitelist -path ../whitelisting/test_topology.json -outside ISD
 
 //A path length filter with maximum path length 3
 pathLength -max 3
+
+//A per AS rate limiting filter for 5 ASes
+asRateLimit -outside 5

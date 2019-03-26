@@ -15,23 +15,24 @@
 package path_length
 
 import (
+	"strconv"
+
 	"github.com/scionproto/scion/go/lib/common"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters"
 	"github.com/scionproto/scion/go/lib/scmp"
 	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/lib/spath"
-	"strconv"
+)
+
+const (
+	minLength_flag = "-min"
+	maxLength_flag = "-max"
 )
 
 var SCMPClassType = scmp.ClassType{
 	Class: scmp.C_Filtering,
 	Type:  scmp.T_F_PathLengthNotAccepted,
 }
-
-var (
-	minLength_flag = "-min"
-	maxLength_flag = "-max"
-)
 
 var _ filters.PacketFilter = (*PathLengthFilter)(nil)
 

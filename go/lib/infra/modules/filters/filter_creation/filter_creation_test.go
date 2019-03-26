@@ -22,6 +22,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/path_length"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters/per_as_rate_limiting"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/whitelisting"
 )
 
@@ -47,6 +48,10 @@ func Test_createFilter(t *testing.T) {
 				".",
 				reflect.TypeOf(&path_length.PathLengthFilter{}),
 				"Path Length Filter"},
+			{"asRateLimit -local 1",
+				".",
+				reflect.TypeOf(&per_as_rate_limiting.PerASRateLimitFilter{}),
+				"Per AS Rate Limit Filter"},
 		}
 
 		for _, test := range tests {
@@ -77,6 +82,7 @@ func Test_createFilter(t *testing.T) {
 			{"nonExistentFilter", true},
 			{"whitelist -invalidFlag", true},
 			{"pathLength -invalidFlag", true},
+			{"asRateLimit -invalidFlag", true},
 		}
 
 		for _, test := range nilFilterTests {
@@ -153,7 +159,7 @@ func Test_CreateFiltersFromConfigFile(t *testing.T) {
 		})
 
 		Convey("Should return a filled filter slice", func() {
-			So(filterSlice, ShouldHaveLength, 2)
+			So(filterSlice, ShouldHaveLength, 3)
 		})
 
 		tests := []struct {
@@ -164,6 +170,8 @@ func Test_CreateFiltersFromConfigFile(t *testing.T) {
 				reflect.TypeOf(&whitelisting.WhitelistFilter{})},
 			{"Path Length Filter",
 				reflect.TypeOf(&path_length.PathLengthFilter{})},
+			{"Per AS Rate Limit Filter",
+				reflect.TypeOf(&per_as_rate_limiting.PerASRateLimitFilter{})},
 		}
 
 		for i, test := range tests {

@@ -29,12 +29,7 @@ import (
 	"github.com/scionproto/scion/go/proto"
 )
 
-var SCMPClassType = scmp.ClassType{
-	Class: scmp.C_Filtering,
-	Type:  scmp.T_F_NotOnWhitelist,
-}
-
-var (
+const (
 	defaultRescanningInterval = float64(24 * 60) //minutes in a day
 	path_flag                 = "-path"
 	rescanInterval_flag       = "-interval"
@@ -48,6 +43,11 @@ var (
 	AS_value                  = "AS"
 	infra_value               = "infra"
 )
+
+var SCMPClassType = scmp.ClassType{
+	Class: scmp.C_Filtering,
+	Type:  scmp.T_F_NotOnWhitelist,
+}
 
 var _ filters.PacketFilter = (*WhitelistFilter)(nil)
 
@@ -117,13 +117,11 @@ func NewWhitelistFilterFromStrings(configParams []string, configDir string) (*Wh
 		switch configParams[i] {
 		case path_flag:
 			pathToTopoFile = configParams[i+1]
-			continue
 		case rescanInterval_flag:
 			rescanInterval, err = strconv.ParseFloat(configParams[i+1], 64)
 			if err != nil {
 				return nil, err
 			}
-			continue
 		case outsideWL_flag:
 			switch configParams[i+1] {
 			case ISD_value:
@@ -135,7 +133,6 @@ func NewWhitelistFilterFromStrings(configParams []string, configDir string) (*Wh
 			case coreNeighbours_value:
 				outsideSettings = WLCoreNeighbours
 			}
-			continue
 		case localWL_flag:
 			switch configParams[i+1] {
 			case AS_value:
@@ -170,12 +167,12 @@ func (f *WhitelistFilter) FilterPacket(pkt *snet.SCIONPacket) (filters.FilterRes
 
 	f.rescanTopoFileIfNecessary()
 
-	addr := pkt.Source
+	address := pkt.Source
 
-	if addr.IA == f.localIA {
-		return f.filterLocalAddr(addr)
+	if address.IA == f.localIA {
+		return f.filterLocalAddr(address)
 	} else {
-		return f.filterRemoteAddr(addr)
+		return f.filterRemoteAddr(address)
 	}
 }
 
