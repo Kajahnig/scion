@@ -15,11 +15,12 @@
 package counting_bloom
 
 import (
-	"github.com/scionproto/scion/go/lib/common"
 	"hash"
 	"sync"
 
 	"github.com/scionproto/scion/bazel-scion/external/com_github_pierrec_xxhash/xxHash32"
+
+	"github.com/scionproto/scion/go/lib/common"
 )
 
 type CBF struct {
