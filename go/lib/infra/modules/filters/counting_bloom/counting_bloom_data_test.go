@@ -15,9 +15,9 @@
 package counting_bloom
 
 import (
+	"fmt"
 	"testing"
 
-	"github.com/scionproto/scion/bazel-scion/external/go_sdk/src/fmt"
 	. "github.com/smartystreets/goconvey/convey"
 )
 

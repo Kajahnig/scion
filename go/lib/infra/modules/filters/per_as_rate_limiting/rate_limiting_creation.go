@@ -33,7 +33,7 @@ const (
 	localInterval_flag   = "-lInterval"
 	outsideInterval_flag = "-oInterval"
 	//5 minutes default interval
-	defaultInterval float64 = 300
+	defaultInterval = 300 * time.Second
 
 	localMaxCount_flag   = "-lMax"
 	outsideMaxCount_flag = "-oMax"
@@ -47,9 +47,6 @@ type PerASRateLimitFilter struct {
 	localRateLimiting   bool
 	outsideRateLimiting bool
 
-	lastLocalUpdate   time.Time
-	lastOutsideUpdate time.Time
-
 	localFilterInfo   rateLimitFilterInfo
 	outsideFilterInfo rateLimitFilterInfo
 
@@ -58,7 +55,7 @@ type PerASRateLimitFilter struct {
 }
 
 type rateLimitFilterInfo struct {
-	interval    float64
+	interval    time.Duration
 	numCells    uint32
 	numHashFunc uint32
 	maxValue    uint32
@@ -74,16 +71,18 @@ func NewPerASRateLimitFilterFromStrings(configParams []string) (*PerASRateLimitF
 	for i := 0; i < len(configParams); i += 2 {
 		switch configParams[i] {
 		case localInterval_flag:
-			lInterval, err = strconv.ParseFloat(configParams[i+1], 64)
+			interval, err := strconv.ParseInt(configParams[i+1], 10, 32)
 			if err != nil {
 				return nil, err
 			}
+			lInterval = time.Duration(interval) * time.Second
 			local = true
 		case outsideInterval_flag:
-			oInterval, err = strconv.ParseFloat(configParams[i+1], 64)
+			interval, err := strconv.ParseInt(configParams[i+1], 10, 32)
 			if err != nil {
 				return nil, err
 			}
+			lInterval = time.Duration(interval) * time.Second
 			outside = true
 		case nrOfLocalClients_flag:
 			lNumElementsToCount, err = strconv.ParseFloat(configParams[i+1], 64)
@@ -132,7 +131,7 @@ func NewPerASRateLimitFilterFromStrings(configParams []string) (*PerASRateLimitF
 	return NewPerASRateLimitFilter(local, outside, localFilterInfo, outsideFilterInfo)
 }
 
-func newRateLimitFilterInfo(interval, numElementsToCount float64, maxValue uint32) (*rateLimitFilterInfo, error) {
+func newRateLimitFilterInfo(interval time.Duration, numElementsToCount float64, maxValue uint32) (*rateLimitFilterInfo, error) {
 
 	if interval < 1 {
 		return nil, common.NewBasicError("Interval for the rate limiting filter is too small",
@@ -195,24 +194,21 @@ func NewPerASRateLimitFilter(localRateLimiting, outsideRateLimiting bool,
 
 	filter := &PerASRateLimitFilter{
 		localRateLimiting, outsideRateLimiting,
-		time.Now(), time.Now(),
 		*localFilterInfo, *outsideFilterInfo,
 		localFilter, outsideFilter,
 	}
 
 	if filter.localRateLimiting {
-		interval := time.Duration(localFilterInfo.interval) * time.Second
 		periodic.StartPeriodicTask(
 			&FilterResetter{filter.localFilter},
-			periodic.NewTicker(interval),
-			interval)
+			periodic.NewTicker(localFilterInfo.interval),
+			localFilterInfo.interval)
 	}
 	if filter.outsideRateLimiting {
-		interval := time.Duration(outsideFilterInfo.interval) * time.Second
 		periodic.StartPeriodicTask(
 			&FilterResetter{filter.outsideFilter},
-			periodic.NewTicker(interval),
-			interval)
+			periodic.NewTicker(outsideFilterInfo.interval),
+			outsideFilterInfo.interval)
 	}
 
 	return filter, nil

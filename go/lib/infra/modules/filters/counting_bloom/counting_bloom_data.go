@@ -70,7 +70,7 @@ func (c *cbfData8) increaseLocations(minLocations []uint32) {
 }
 
 func (c *cbfData8) reset() {
-	for i, _ := range c.data {
+	for i := range c.data {
 		c.data[i] = 0
 	}
 }
@@ -125,7 +125,7 @@ func (c *cbfData16) increaseLocations(minLocations []uint32) {
 }
 
 func (c *cbfData16) reset() {
-	for i, _ := range c.data {
+	for i := range c.data {
 		c.data[i] = 0
 	}
 }

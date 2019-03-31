@@ -72,7 +72,7 @@ func Test_newRateLimitFilterInfo(t *testing.T) {
 
 	Convey("Creating a new rate limit filter info ", t, func() {
 		tests := []struct {
-			interval      float64
+			interval      time.Duration
 			numOfElements float64
 			maxValue      uint32
 		}{
@@ -216,10 +216,6 @@ func TestNewPerASRateLimitFilter(t *testing.T) {
 					So(filter.localFilter, ShouldNotBeNil)
 					So(filter.outsideFilter, ShouldNotBeNil)
 				})
-				Convey("Should set the last update variables to somewhere in the last 5 seconds", func() {
-					So(filter.lastLocalUpdate, ShouldHappenWithin, time.Second*5, time.Now())
-					So(filter.lastOutsideUpdate, ShouldHappenWithin, time.Second*5, time.Now())
-				})
 			})
 		}
 	})
@@ -251,7 +247,7 @@ func TestNewPerASRateLimitFilterFromStrings(t *testing.T) {
 
 		successfulTests := []struct {
 			configString     []string
-			expectedInterval float64
+			expectedInterval time.Duration
 			expectedMaxCount uint32
 			local            bool
 			outside          bool
@@ -260,7 +256,7 @@ func TestNewPerASRateLimitFilterFromStrings(t *testing.T) {
 				defaultInterval, defaultMaxCount,
 				true, false},
 			{[]string{nrOfLocalClients_flag, "10", localInterval_flag, "60", localMaxCount_flag, "300"},
-				60, 300,
+				60 * time.Second, 300,
 				true, false},
 			{[]string{nrOfOutsideASes_flag, "10", outsideMaxCount_flag, "100"},
 				defaultInterval, 100,

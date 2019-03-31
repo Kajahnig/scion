@@ -22,8 +22,5 @@ go_test(
         "counting_bloom_test.go",
     ],
     embed = [":go_default_library"],
-    deps = [
-        "//bazel-scion/external/go_sdk/src/fmt:go_default_library",
-        "@com_github_smartystreets_goconvey//convey:go_default_library",
-    ],
+    deps = ["@com_github_smartystreets_goconvey//convey:go_default_library"],
 )

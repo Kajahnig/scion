@@ -16,6 +16,7 @@ package per_as_rate_limiting
 
 import (
 	"testing"
+	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
 
@@ -158,62 +159,61 @@ func TestPerASRateLimitFilter_FilterPacket(t *testing.T) {
 
 func TestPerASRateLimitFilter_FilterPacketWithResetIntevals(t *testing.T) {
 
-	localConfig := []string{nrOfLocalClients_flag, "1", localMaxCount_flag, "2", localInterval_flag, "1"}
+	Convey("Filtering packets with local per AS rate limit filtering and 10 millisecond reset intervals", t, func() {
 
-	Convey("Filtering packets with a per AS rate limit filter and 1 second reset intervals", t, func() {
+		localRateLimitInfo, err1 := newRateLimitFilterInfo(10*time.Millisecond, float64(1), uint32(2))
+		filter, err2 := NewPerASRateLimitFilter(
+			true, false,
+			localRateLimitInfo, &rateLimitFilterInfo{})
+		So(err1, ShouldBeNil)
+		So(err2, ShouldBeNil)
 
-		Convey("That does local rate limiting", func() {
+		localPacket := packetFrom(IA1_IP1, nil)
 
-			filter, err := NewPerASRateLimitFilterFromStrings(localConfig)
-			So(err, ShouldBeNil)
+		result1, _ := filter.FilterPacket(localPacket)
+		result2, _ := filter.FilterPacket(localPacket)
+		result3, _ := filter.FilterPacket(localPacket)
 
-			localPacket := packetFrom(IA1_IP1, nil)
+		Convey("Should accept a local packet from IP1 twice, but not a 3rd time", func() {
+			So(result1, ShouldEqual, filters.FilterAccept)
+			So(result2, ShouldEqual, filters.FilterAccept)
+			So(result3, ShouldEqual, filters.FilterDrop)
+		})
 
-			result1, err := filter.FilterPacket(localPacket)
-			result2, err := filter.FilterPacket(localPacket)
-			result3, err := filter.FilterPacket(localPacket)
+		for result3 == filters.FilterDrop {
+			result1 = result2
+			result2 = result3
+			result3, _ = filter.FilterPacket(localPacket)
+		}
 
-			Convey("Should accept a local packet from IP1 twice, but not a 3rd time", func() {
-				So(result1, ShouldEqual, filters.FilterAccept)
-				So(result2, ShouldEqual, filters.FilterAccept)
-				So(result3, ShouldEqual, filters.FilterDrop)
-			})
+		Convey("After the filter has been reset, the local packets should be accepted again", func() {
+			So(result1, ShouldEqual, filters.FilterDrop)
+			So(result2, ShouldEqual, filters.FilterDrop)
+			So(result3, ShouldEqual, filters.FilterAccept)
+		})
 
-			for result3 == filters.FilterDrop {
-				result1 = result2
-				result2 = result3
-				result3, _ = filter.FilterPacket(localPacket)
-			}
+		for i := 0; i < 2; i++ {
+			result1 = result2
+			result2 = result3
+			result3, _ = filter.FilterPacket(localPacket)
+		}
 
-			Convey("After the filter has been reset, the local packets should be accepted again", func() {
-				So(result1, ShouldEqual, filters.FilterDrop)
-				So(result2, ShouldEqual, filters.FilterDrop)
-				So(result3, ShouldEqual, filters.FilterAccept)
-			})
+		Convey("And after sending another packet, the following packets should be dropped again", func() {
+			So(result1, ShouldEqual, filters.FilterAccept)
+			So(result2, ShouldEqual, filters.FilterAccept)
+			So(result3, ShouldEqual, filters.FilterDrop)
+		})
 
-			for i := 0; i < 2; i++ {
-				result1 = result2
-				result2 = result3
-				result3, _ = filter.FilterPacket(localPacket)
-			}
+		for result3 == filters.FilterDrop {
+			result1 = result2
+			result2 = result3
+			result3, _ = filter.FilterPacket(localPacket)
+		}
 
-			Convey("And after sending another packet, the following packets should be dropped again", func() {
-				So(result1, ShouldEqual, filters.FilterAccept)
-				So(result2, ShouldEqual, filters.FilterAccept)
-				So(result3, ShouldEqual, filters.FilterDrop)
-			})
-
-			for result3 == filters.FilterDrop {
-				result1 = result2
-				result2 = result3
-				result3, _ = filter.FilterPacket(localPacket)
-			}
-
-			Convey("And after the filter is reset again the packets should be accepted again", func() {
-				So(result1, ShouldEqual, filters.FilterDrop)
-				So(result2, ShouldEqual, filters.FilterDrop)
-				So(result3, ShouldEqual, filters.FilterAccept)
-			})
+		Convey("And after the filter is reset again the packets should be accepted again", func() {
+			So(result1, ShouldEqual, filters.FilterDrop)
+			So(result2, ShouldEqual, filters.FilterDrop)
+			So(result3, ShouldEqual, filters.FilterAccept)
 		})
 	})
 }
