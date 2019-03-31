@@ -1,12 +1,191 @@
 {
-  "BorderRouters": {},
+  "BorderRouters": {
+    "br2-ff00_0_211-1": {
+      "InternalAddrs": {
+        "IPv4": {
+          "PublicOverlay": {
+            "OverlayPort": 31030,
+            "Addr": "127.0.0.209"
+          }
+        }
+      },
+      "CtrlAddr": {
+        "IPv4": {
+          "Public": {
+            "L4Port": 31029,
+            "Addr": "127.0.0.209"
+          }
+        }
+      },
+      "Interfaces": {
+        "1": {
+          "Overlay": "UDP/IPv4",
+          "MTU": 1472,
+          "PublicOverlay": {
+            "OverlayPort": 50000,
+            "Addr": "127.0.0.54"
+          },
+          "RemoteOverlay": {
+            "OverlayPort": 50000,
+            "Addr": "127.0.0.55"
+          },
+          "LinkTo": "PEER",
+          "Bandwidth": 1000,
+          "ISD_AS": "2-ff00:0:221"
+        },
+        "2": {
+          "Overlay": "UDP/IPv4",
+          "MTU": 1472,
+          "PublicOverlay": {
+            "OverlayPort": 50000,
+            "Addr": "127.0.0.50"
+          },
+          "RemoteOverlay": {
+            "OverlayPort": 50000,
+            "Addr": "127.0.0.51"
+          },
+          "LinkTo": "CHILD",
+          "Bandwidth": 1000,
+          "ISD_AS": "2-ff00:0:212"
+        },
+        "3": {
+          "Overlay": "UDP/IPv4",
+          "MTU": 1472,
+          "PublicOverlay": {
+            "OverlayPort": 50000,
+            "Addr": "127.0.0.52"
+          },
+          "RemoteOverlay": {
+            "OverlayPort": 50000,
+            "Addr": "127.0.0.53"
+          },
+          "LinkTo": "CHILD",
+          "Bandwidth": 1000,
+          "ISD_AS": "2-ff00:0:212"
+        },
+        "4": {
+          "Overlay": "UDP/IPv4",
+          "MTU": 1472,
+          "PublicOverlay": {
+            "OverlayPort": 50000,
+            "Addr": "127.0.0.56"
+          },
+          "RemoteOverlay": {
+            "OverlayPort": 50000,
+            "Addr": "127.0.0.57"
+          },
+          "LinkTo": "CHILD",
+          "Bandwidth": 1000,
+          "ISD_AS": "2-ff00:0:222"
+        },
+        "5": {
+          "Overlay": "UDP/IPv4",
+          "MTU": 1472,
+          "PublicOverlay": {
+            "OverlayPort": 50000,
+            "Addr": "127.0.0.13"
+          },
+          "RemoteOverlay": {
+            "OverlayPort": 50000,
+            "Addr": "127.0.0.12"
+          },
+          "LinkTo": "PEER",
+          "Bandwidth": 1000,
+          "ISD_AS": "1-ff00:0:111"
+        },
+        "6": {
+          "Overlay": "UDP/IPv4",
+          "MTU": 1472,
+          "PublicOverlay": {
+            "OverlayPort": 50000,
+            "Addr": "127.0.0.21"
+          },
+          "RemoteOverlay": {
+            "OverlayPort": 50000,
+            "Addr": "127.0.0.20"
+          },
+          "LinkTo": "PEER",
+          "Bandwidth": 1000,
+          "ISD_AS": "1-ff00:0:111"
+        },
+        "7": {
+          "Overlay": "UDP/IPv4",
+          "MTU": 1472,
+          "PublicOverlay": {
+            "OverlayPort": 50000,
+            "Addr": "127.0.0.47"
+          },
+          "RemoteOverlay": {
+            "OverlayPort": 50000,
+            "Addr": "127.0.0.46"
+          },
+          "LinkTo": "PARENT",
+          "Bandwidth": 1000,
+          "ISD_AS": "2-ff00:0:210"
+        },
+        "8": {
+          "Overlay": "UDP/IPv4",
+          "MTU": 1472,
+          "PublicOverlay": {
+            "OverlayPort": 50000,
+            "Addr": "127.0.0.49"
+          },
+          "RemoteOverlay": {
+            "OverlayPort": 50000,
+            "Addr": "127.0.0.48"
+          },
+          "LinkTo": "PARENT",
+          "Bandwidth": 1000,
+          "ISD_AS": "2-ff00:0:210"
+        }
+      }
+    }
+  },
   "Overlay": "UDP/IPv4",
   "MTU": 1472,
-  "BeaconService": {},
+  "BeaconService": {
+    "bs2-ff00_0_211-1": {
+      "Addrs": {
+        "IPv4": {
+          "Public": {
+            "L4Port": 31026,
+            "Addr": "127.0.0.210"
+          }
+        }
+      }
+    }
+  },
   "DiscoveryService": {},
   "Core": false,
-  "PathService": {},
-  "ZookeeperService": {},
+  "PathService": {
+    "ps2-ff00_0_211-1": {
+      "Addrs": {
+        "IPv4": {
+          "Public": {
+            "L4Port": 31028,
+            "Addr": "127.0.0.212"
+          }
+        }
+      }
+    }
+  },
+  "ZookeeperService": {
+    "1": {
+      "L4Port": 2181,
+      "Addr": "127.0.0.1"
+    }
+  },
   "ISD_AS": "2-ff00:0:211",
-  "CertificateService": {}
+  "CertificateService": {
+    "cs2-ff00_0_211-1": {
+      "Addrs": {
+        "IPv4": {
+          "Public": {
+            "L4Port": 31027,
+            "Addr": "127.0.0.211"
+          }
+        }
+      }
+    }
+  }
 }
