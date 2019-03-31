@@ -18,15 +18,18 @@ import (
 	"hash"
 	"sync"
 
-	"github.com/scionproto/scion/bazel-scion/external/com_github_pierrec_xxhash/xxHash32"
-
+	"github.com/pierrec/xxHash/xxHash32"
 	"github.com/scionproto/scion/go/lib/common"
+	"github.com/scionproto/scion/go/lib/scrypto"
 )
 
 type CBF struct {
 	numCells     uint32
-	filter       cbfData
+	filter1      cbfData
+	filter2      cbfData
+	usingFilter1 bool
 	cbfDataMutex sync.Mutex
+	resetMutex   sync.Mutex
 
 	numHashes uint32
 	hash1     hash.Hash32
@@ -47,28 +50,38 @@ func NewCBF(numCells uint32, numHashes uint32, maxValue uint32) (*CBF, error) {
 		return nil, common.NewBasicError("Can not instantiate CBF with a maximum value bigger than 16 bit", nil)
 	}
 
-	var data cbfData
+	var data1, data2 cbfData
 	if maxValue > 255 {
-		data = &cbfData16{data: make([]uint16, numCells)}
+		data1 = &cbfData16{data: make([]uint16, numCells)}
+		data2 = &cbfData16{data: make([]uint16, numCells)}
 	} else {
-		data = &cbfData8{data: make([]uint8, numCells)}
+		data1 = &cbfData8{data: make([]uint8, numCells)}
+		data2 = &cbfData8{data: make([]uint8, numCells)}
 	}
 
 	return &CBF{
-		numCells:  numCells,
-		filter:    data,
-		numHashes: numHashes,
-		hash1:     xxHash32.New(0),
-		hash2:     xxHash32.New(2147483648),
-		maxValue:  maxValue,
+		numCells:     numCells,
+		filter1:      data1,
+		filter2:      data2,
+		usingFilter1: true,
+		numHashes:    numHashes,
+		hash1:        xxHash32.New(uint32(scrypto.RandUint64() >> 32)),
+		hash2:        xxHash32.New(uint32(scrypto.RandUint64() >> 32)),
+		maxValue:     maxValue,
 	}, nil
 }
 
 func (cbf *CBF) CheckIfRateLimitExceeded(key []byte) (bool, error) {
+	cbf.hashMutex.Lock()
 	h1, h2, err := cbf.getHashes(key)
+
 	if err != nil {
+		cbf.hashMutex.Unlock()
 		return false, err
 	}
+	cbf.cbfDataMutex.Lock()
+	defer cbf.cbfDataMutex.Unlock()
+	cbf.hashMutex.Unlock()
 
 	locations := make([]uint32, cbf.numHashes)
 
@@ -77,23 +90,53 @@ func (cbf *CBF) CheckIfRateLimitExceeded(key []byte) (bool, error) {
 		locations[i] = (h1 + i*h2) % cbf.numCells
 	}
 
-	cbf.cbfDataMutex.Lock()
-	defer cbf.cbfDataMutex.Unlock()
-
-	minLocations, minValue := cbf.filter.getMinimum(locations)
+	var minLocations []uint32
+	var minValue uint32
+	if cbf.usingFilter1 {
+		minLocations, minValue = cbf.filter1.getMinimum(locations)
+	} else {
+		minLocations, minValue = cbf.filter2.getMinimum(locations)
+	}
 
 	if minValue >= cbf.maxValue {
 		return true, nil
 	}
 
-	cbf.filter.increaseLocations(minLocations)
+	if cbf.usingFilter1 {
+		cbf.filter1.increaseLocations(minLocations)
+	} else {
+		cbf.filter2.increaseLocations(minLocations)
+	}
 	return false, nil
 }
 
-func (cbf *CBF) getHashes(key []byte) (uint32, uint32, error) {
+func (cbf *CBF) Reset() {
+	cbf.resetMutex.Lock()
 	cbf.hashMutex.Lock()
 	defer cbf.hashMutex.Unlock()
+	cbf.cbfDataMutex.Lock()
+	defer cbf.cbfDataMutex.Unlock()
 
+	cbf.hash1 = xxHash32.New(uint32(scrypto.RandUint64() >> 32))
+	cbf.hash2 = xxHash32.New(uint32(scrypto.RandUint64() >> 32))
+
+	if cbf.usingFilter1 {
+		cbf.usingFilter1 = false
+		go func() {
+			cbf.filter1.reset()
+			cbf.resetMutex.Unlock()
+		}()
+	} else {
+		cbf.usingFilter1 = true
+		go func() {
+			cbf.filter2.reset()
+			cbf.resetMutex.Unlock()
+		}()
+	}
+}
+
+//only execute this when you have the hashLock
+func (cbf *CBF) getHashes(key []byte) (uint32, uint32, error) {
 	_, err := cbf.hash1.Write(key)
 	if err != nil {
 		return 0, 0, err

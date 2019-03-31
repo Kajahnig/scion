@@ -15,6 +15,7 @@
 package per_as_rate_limiting
 
 import (
+	"context"
 	"math"
 	"strconv"
 	"time"
@@ -22,6 +23,7 @@ import (
 	"github.com/scionproto/scion/go/lib/common"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/counting_bloom"
+	"github.com/scionproto/scion/go/lib/periodic"
 )
 
 const (
@@ -191,12 +193,29 @@ func NewPerASRateLimitFilter(localRateLimiting, outsideRateLimiting bool,
 		}
 	}
 
-	return &PerASRateLimitFilter{
+	filter := &PerASRateLimitFilter{
 		localRateLimiting, outsideRateLimiting,
 		time.Now(), time.Now(),
 		*localFilterInfo, *outsideFilterInfo,
 		localFilter, outsideFilter,
-	}, nil
+	}
+
+	if filter.localRateLimiting {
+		interval := time.Duration(localFilterInfo.interval) * time.Second
+		periodic.StartPeriodicTask(
+			&FilterResetter{filter.localFilter},
+			periodic.NewTicker(interval),
+			interval)
+	}
+	if filter.outsideRateLimiting {
+		interval := time.Duration(outsideFilterInfo.interval) * time.Second
+		periodic.StartPeriodicTask(
+			&FilterResetter{filter.outsideFilter},
+			periodic.NewTicker(interval),
+			interval)
+	}
+
+	return filter, nil
 }
 
 func createCBFFromRateLimitFilterInfo(info *rateLimitFilterInfo) (*counting_bloom.CBF, error) {
@@ -205,4 +224,12 @@ func createCBFFromRateLimitFilterInfo(info *rateLimitFilterInfo) (*counting_bloo
 		return nil, err
 	}
 	return cbf, nil
+}
+
+type FilterResetter struct {
+	filter *counting_bloom.CBF
+}
+
+func (f *FilterResetter) Run(ctx context.Context) {
+	f.filter.Reset()
 }

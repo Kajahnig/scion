@@ -70,7 +70,8 @@ func TestNewCBF(t *testing.T) {
 				})
 
 				Convey(fmt.Sprintf("Should return a CBF with %v bit cbfData", test.typeString), func() {
-					So(reflect.TypeOf(cbf.filter), ShouldEqual, test.cbfDataType)
+					So(reflect.TypeOf(cbf.filter1), ShouldEqual, test.cbfDataType)
+					So(reflect.TypeOf(cbf.filter2), ShouldEqual, test.cbfDataType)
 				})
 			})
 		}
@@ -140,6 +141,43 @@ func TestCBF_CheckIfRateLimitExceeded(t *testing.T) {
 			answer7, err7 := cbf.CheckIfRateLimitExceeded([]byte("key3"))
 			So(err7, ShouldBeNil)
 			So(answer7, ShouldBeFalse)
+		})
+	})
+}
+
+func TestCBF_Reset(t *testing.T) {
+
+	cbf, err := NewCBF(5, 3, 1)
+
+	Convey("Creating a new CBF with 5 cells, 3 hash functions and max value 1", t, func() {
+		So(err, ShouldBeNil)
+
+		answer1, _ := cbf.CheckIfRateLimitExceeded([]byte("key1"))
+		answer2, _ := cbf.CheckIfRateLimitExceeded([]byte("key1"))
+
+		Convey("Checking for an exceeded rate limit for key1 should return false the first and true the second time", func() {
+			So(answer1, ShouldBeFalse)
+			So(answer2, ShouldBeTrue)
+		})
+
+		cbf.Reset()
+
+		answer1, _ = cbf.CheckIfRateLimitExceeded([]byte("key1"))
+		answer2, _ = cbf.CheckIfRateLimitExceeded([]byte("key1"))
+
+		Convey("Calling reset and repeating that should have the same effect", func() {
+			So(answer1, ShouldBeFalse)
+			So(answer2, ShouldBeTrue)
+		})
+
+		cbf.Reset()
+
+		answer1, _ = cbf.CheckIfRateLimitExceeded([]byte("key1"))
+		answer2, _ = cbf.CheckIfRateLimitExceeded([]byte("key1"))
+
+		Convey("Also for the second reset call", func() {
+			So(answer1, ShouldBeFalse)
+			So(answer2, ShouldBeTrue)
 		})
 	})
 }

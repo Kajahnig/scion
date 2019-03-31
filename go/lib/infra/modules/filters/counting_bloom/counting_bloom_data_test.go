@@ -96,6 +96,35 @@ func TestCBFData8_IncreaseLocations(t *testing.T) {
 	})
 }
 
+func TestCBFData8_reset(t *testing.T) {
+
+	Convey("Resetting the array ", t, func() {
+		tests := []struct {
+			data []uint8
+		}{
+			{[]uint8{3}},
+			{[]uint8{1, 2, 3, 4, 5}},
+			{[]uint8{1, 2, 0, 4, 5}},
+			{[]uint8{1, 0, 5, 9, 1, 0, 0}},
+		}
+
+		for _, test := range tests {
+
+			cbfData8 := &cbfData8{data: test.data}
+
+			Convey(fmt.Sprintf("%v", test.data), func() {
+
+				cbfData8.reset()
+
+				Convey(fmt.Sprintf("Should zero out the whole array"), func() {
+					So(cbfData8.data, ShouldResemble, make([]uint8, len(cbfData8.data)))
+				})
+			})
+		}
+
+	})
+}
+
 func TestCBFData16_GetMinimum(t *testing.T) {
 
 	Convey("Getting the minimum out of", t, func() {
@@ -164,6 +193,34 @@ func TestCBFData16_IncreaseLocations(t *testing.T) {
 
 				Convey(fmt.Sprintf("Should result in %v", test.expectedDataState), func() {
 					So(cbfData16.data, ShouldResemble, test.expectedDataState)
+				})
+			})
+		}
+
+	})
+}
+
+func TestCBFData16_reset(t *testing.T) {
+	Convey("Resetting the array ", t, func() {
+		tests := []struct {
+			data []uint16
+		}{
+			{[]uint16{3}},
+			{[]uint16{1, 2, 3, 4, 5}},
+			{[]uint16{1, 2, 0, 4, 5}},
+			{[]uint16{1, 0, 5, 9, 1, 0, 0}},
+		}
+
+		for _, test := range tests {
+
+			cbfData16 := &cbfData16{data: test.data}
+
+			Convey(fmt.Sprintf("%v", test.data), func() {
+
+				cbfData16.reset()
+
+				Convey(fmt.Sprintf("Should zero out the whole array"), func() {
+					So(cbfData16.data, ShouldResemble, make([]uint16, len(cbfData16.data)))
 				})
 			})
 		}

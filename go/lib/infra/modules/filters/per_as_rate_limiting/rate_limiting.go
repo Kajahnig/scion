@@ -16,11 +16,8 @@ package per_as_rate_limiting
 
 import (
 	"github.com/scionproto/scion/go/lib/infra/modules/filters"
-	"github.com/scionproto/scion/go/lib/infra/modules/filters/counting_bloom"
-	"github.com/scionproto/scion/go/lib/snet"
-	"time"
-
 	"github.com/scionproto/scion/go/lib/scmp"
+	"github.com/scionproto/scion/go/lib/snet"
 )
 
 var SCMPClassType = scmp.ClassType{
@@ -36,57 +33,20 @@ func (f *PerASRateLimitFilter) FilterPacket(pkt *snet.SCIONPacket) (filters.Filt
 
 	if pkt.Path.IsEmpty() {
 		if f.localRateLimiting {
-			return f.filterLocalPacket(pkt)
+			addrString := []byte(pkt.Source.Host.IP().String())
+			return f.decideFilterResult(f.localFilter.CheckIfRateLimitExceeded(addrString))
 		}
 		return filters.FilterAccept, nil
 	}
 
 	if f.outsideRateLimiting {
-		return f.filterOutsidePacket(pkt)
+		addrString := []byte(pkt.Source.IA.String())
+		return f.decideFilterResult(f.outsideFilter.CheckIfRateLimitExceeded(addrString))
 	}
 	return filters.FilterAccept, nil
 }
 
-func (f *PerASRateLimitFilter) filterLocalPacket(pkt *snet.SCIONPacket) (filters.FilterResult, error) {
-
-	if time.Since(f.lastLocalUpdate).Seconds() > f.localFilterInfo.interval {
-		cbf, err := counting_bloom.NewCBF(
-			f.localFilterInfo.numCells,
-			f.localFilterInfo.numHashFunc,
-			f.localFilterInfo.maxValue,
-		)
-		if err != nil {
-			return filters.FilterError, err
-		}
-		f.localFilter = cbf
-	}
-
-	rateLimitExceeded, err := f.localFilter.CheckIfRateLimitExceeded([]byte(pkt.Source.Host.IP().String()))
-
-	if err != nil {
-		return filters.FilterError, err
-	}
-	if rateLimitExceeded {
-		return filters.FilterDrop, nil
-	}
-	return filters.FilterAccept, nil
-}
-
-func (f *PerASRateLimitFilter) filterOutsidePacket(pkt *snet.SCIONPacket) (filters.FilterResult, error) {
-
-	if time.Since(f.lastOutsideUpdate).Seconds() > f.outsideFilterInfo.interval {
-		cbf, err := counting_bloom.NewCBF(
-			f.outsideFilterInfo.numCells,
-			f.outsideFilterInfo.numHashFunc,
-			f.outsideFilterInfo.maxValue,
-		)
-		if err != nil {
-			return filters.FilterError, err
-		}
-		f.outsideFilter = cbf
-	}
-
-	rateLimitExceeded, err := f.outsideFilter.CheckIfRateLimitExceeded([]byte(pkt.Source.IA.String()))
+func (f *PerASRateLimitFilter) decideFilterResult(rateLimitExceeded bool, err error) (filters.FilterResult, error) {
 	if err != nil {
 		return filters.FilterError, err
 	}

@@ -17,6 +17,7 @@ package counting_bloom
 type cbfData interface {
 	getMinimum(locations []uint32) (minLocations []uint32, minValue uint32)
 	increaseLocations(minLocations []uint32)
+	reset()
 }
 
 var _ cbfData = (*cbfData8)(nil)
@@ -68,6 +69,12 @@ func (c *cbfData8) increaseLocations(minLocations []uint32) {
 	}
 }
 
+func (c *cbfData8) reset() {
+	for i, _ := range c.data {
+		c.data[i] = 0
+	}
+}
+
 var _ cbfData = (*cbfData16)(nil)
 
 type cbfData16 struct {
@@ -114,5 +121,11 @@ func (c *cbfData16) increaseLocations(minLocations []uint32) {
 		if !alreadyIncreased {
 			c.data[location] += 1
 		}
+	}
+}
+
+func (c *cbfData16) reset() {
+	for i, _ := range c.data {
+		c.data[i] = 0
 	}
 }
