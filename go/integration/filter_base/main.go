@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -126,10 +127,11 @@ func (s server) run() {
 }
 
 type client struct {
-	conn         snet.Conn
-	sdConn       sciond.Connector
-	expectsError bool
-	resultType   scmp.Type
+	conn               snet.Conn
+	sdConn             sciond.Connector
+	numOfRequests      int
+	maxPassingRequests int
+	resultType         scmp.Type
 }
 
 func (c client) run() int {
@@ -143,39 +145,85 @@ func (c client) run() int {
 
 	c.sdConn = snet.DefNetwork.Sciond()
 
-	c.expectsError, c.resultType, err = determineExpectedResult()
+	c.numOfRequests, c.maxPassingRequests, c.resultType, err = determineExpectedResult()
 	if err != nil {
 		integration.LogFatal("Unable to retrieve expected result", "err", err)
 	}
 
-	return integration.AttemptRepeatedly("PathLengthFilter", c.attemptRequest)
+	if err := c.getRemote(); err != nil {
+		log.Error("Could not get remote", "err", err)
+		return 1
+	}
+
+	return c.AttemptRepeatedly()
 }
 
-func (c client) attemptRequest(n int) bool {
-	// Send ping
-	if err := c.ping(n); err != nil {
-		log.Error("Could not send packet", "err", err)
-		return false
+func determineExpectedResult() (int, int, scmp.Type, error) {
+	configFile, err := os.Open(ResultDir + "/" + resultFileName)
+	if err != nil {
+		return 0, 0, 0, err
 	}
-	// Receive pong
-	if err := c.pong(); err != nil {
-		log.Debug("Error receiving pong", "err", err)
-		return false
+	defer configFile.Close()
+
+	localIAString := integration.Local.IA.String()
+	remoteIAString := remote.IA.String()
+
+	scanner := bufio.NewScanner(configFile)
+	for scanner.Scan() {
+		resultParams := strings.Fields(scanner.Text())
+		if len(resultParams) == 0 || strings.HasPrefix(resultParams[0], "//") {
+			continue
+		}
+		if resultParams[0] == localIAString && resultParams[1] == remoteIAString {
+			return parseResultInfo(resultParams[2:])
+		}
 	}
-	return true
+	if err := scanner.Err(); err != nil {
+		return 0, 0, 0, err
+	}
+	return 0, 0, 0, common.NewBasicError(
+		fmt.Sprintf("Did not find a result type for local IA %v and remote IA %v",
+			localIAString, remoteIAString), nil)
 }
 
-func (c client) ping(n int) error {
-	if err := c.getRemote(n); err != nil {
-		return err
+func parseResultInfo(resultParams []string) (int, int, scmp.Type, error) {
+	var resultType scmp.Type
+	var numOfRequests = 1
+	var numOfSuccessfulRequests = 0
+	var err error
+	switch resultParams[0] {
+	case "no":
+		resultType = scmp.Type(100)
+		numOfSuccessfulRequests = 1
+	case filter_creation.Whitelist:
+		resultType = scmp.T_F_NotOnWhitelist
+	case filter_creation.PathLength:
+		resultType = scmp.T_F_PathLengthNotAccepted
+	case filter_creation.PerASRateLimit:
+		resultType = scmp.T_F_ASOrClientRateLimitReached
+	default:
+		err = common.NewBasicError("No matching result type found",
+			nil, "input", resultParams[2])
 	}
-	c.conn.SetWriteDeadline(time.Now().Add(integration.DefaultIOTimeout))
-	b := pingMessage(remote.IA)
-	_, err := c.conn.WriteTo(b, &remote)
-	return err
+	if len(resultParams) > 1 && err == nil {
+		infoParams := strings.Split(resultParams[1], ",")
+		req, err1 := strconv.ParseInt(infoParams[0], 10, 32)
+		if err1 != nil {
+			err = err1
+		} else {
+			sucReq, err2 := strconv.ParseInt(infoParams[1], 10, 32)
+			if err2 != nil {
+				err = err2
+			} else {
+				numOfRequests = int(req)
+				numOfSuccessfulRequests = int(sucReq)
+			}
+		}
+	}
+	return numOfRequests, numOfSuccessfulRequests, resultType, err
 }
 
-func (c client) getRemote(n int) error {
+func (c client) getRemote() error {
 	if remote.IA.Equal(integration.Local.IA) {
 		return nil
 	}
@@ -183,7 +231,7 @@ func (c client) getRemote(n int) error {
 	ctx, cancelF := context.WithTimeout(context.Background(), libint.CtxTimeout)
 	defer cancelF()
 	paths, err := c.sdConn.Paths(ctx, remote.IA, integration.Local.IA, 1,
-		sciond.PathReqFlags{Refresh: n != 0})
+		sciond.PathReqFlags{Refresh: false})
 	if err != nil {
 		return common.NewBasicError("Error requesting paths", err)
 	}
@@ -204,73 +252,88 @@ func (c client) getRemote(n int) error {
 	return nil
 }
 
-func (c client) pong() error {
+func (c client) AttemptRepeatedly() int {
+	var counter = 0
+	var expectingError = false
+	for i := 0; i < c.numOfRequests; i++ {
+		if err := c.ping(); err != nil {
+			log.Error("Could not send packet", "err", err)
+			return 1
+		}
+		receivedError, err := c.pong(i)
+		if err != nil {
+			log.Debug(fmt.Sprintf("Error receiving pong %v", i), "err", err)
+			return 1
+		}
+
+		if receivedError == expectingError {
+			counter++
+		}
+		if receivedError != expectingError || i == c.numOfRequests-1 {
+			if expectingError { //means we expected an error but did not get one
+				log.Debug(fmt.Sprintf("Received %v errors of type %v from %s",
+					counter, c.resultType.Name(scmp.C_Filtering), remote.IA))
+				if i < c.numOfRequests-1 {
+					expectingError = false
+					counter = 1
+				}
+			} else { //means we did not expect an error but we got one
+				if counter > c.maxPassingRequests {
+					log.Error(fmt.Sprintf("Received %v pong messages, which is over the limit (%v)",
+						counter, c.maxPassingRequests))
+					return 1
+				}
+				log.Debug(fmt.Sprintf("Received %v pong(s) from %s - (limit %v)",
+					counter, remote.IA, c.maxPassingRequests))
+				if i < c.numOfRequests-1 {
+					expectingError = true
+					counter = 1
+				}
+			}
+		}
+	}
+	if c.numOfRequests > 1 && counter == c.numOfRequests-1 {
+		log.Error("All requests were rejected")
+		return 1
+	}
+	if c.numOfRequests == c.maxPassingRequests && counter < c.maxPassingRequests-1 {
+		log.Debug(fmt.Sprintf("%v", counter))
+		log.Debug(fmt.Sprintf("%v", c.maxPassingRequests-1))
+		log.Error("All requests for this client should have passed")
+		return 1
+	}
+	log.Debug(fmt.Sprintf("Successfully sent %v requests", c.numOfRequests))
+	return 0
+}
+
+func (c client) ping() error {
+	time.Sleep(1 * time.Millisecond)
+	c.conn.SetWriteDeadline(time.Now().Add(integration.DefaultIOTimeout))
+	b := pingMessage(remote.IA)
+	_, err := c.conn.WriteTo(b, &remote)
+	return err
+}
+
+func (c client) pong(n int) (bool, error) {
 	c.conn.SetReadDeadline(time.Now().Add(integration.DefaultIOTimeout))
 	reply := make([]byte, 1024)
 	pktLen, err := c.conn.Read(reply)
 
-	if c.expectsError {
-		//reply should be an scmp error
-		return checkForExpectedSCMPError(err, c.resultType)
-	} else if err != nil {
-		//no error expected but one occurred
-		return common.NewBasicError("Error reading packet or SCMP error received when pong was expected", err)
+	if err != nil { //reply should be an scmp error
+		return true, checkForExpectedSCMPError(err, c.resultType)
 	}
-
-	//no error expected and none received, so check for pong
-	return checkForPongMessage(string(reply[:pktLen]))
-}
-
-func determineExpectedResult() (bool, scmp.Type, error) {
-	configFile, err := os.Open(ResultDir + "/" + resultFileName)
-	if err != nil {
-		return false, 0, err
-	}
-	defer configFile.Close()
-
-	localIAString := integration.Local.IA.String()
-	remoteIAString := remote.IA.String()
-
-	scanner := bufio.NewScanner(configFile)
-	for scanner.Scan() {
-		resultParams := strings.Fields(scanner.Text())
-		if len(resultParams) == 0 || strings.HasPrefix(resultParams[0], "//") {
-			continue
-		}
-		if resultParams[0] == localIAString &&
-			resultParams[1] == remoteIAString {
-			switch resultParams[2] {
-			case "no":
-				return false, 0, nil
-			case filter_creation.Whitelist:
-				return true, scmp.T_F_NotOnWhitelist, nil
-			case filter_creation.PathLength:
-				return true, scmp.T_F_PathLengthNotAccepted, nil
-			default:
-				return false, 0, common.NewBasicError("No matching result type found",
-					nil, "input", resultParams[2])
-			}
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		return false, 0, err
-	}
-	return false, 0, common.NewBasicError(
-		fmt.Sprintf("Did not find a result type for local IA %v and remote IA %v",
-			localIAString, remoteIAString), nil)
+	//no error received, so check for pong
+	return false, checkForPongMessage(string(reply[:pktLen]), n)
 }
 
 func checkForExpectedSCMPError(err error, t scmp.Type) error {
-	if err == nil {
-		return common.NewBasicError("Expected an SCMP error but got none", nil)
-	}
 	opErr, ok := err.(*snet.OpError)
 	if !ok {
 		return common.NewBasicError("Expected OpError but got", err)
 	}
 	typeName := t.Name(FilterClass)
 	if opErr.SCMP().Class == FilterClass && opErr.SCMP().Type == t {
-		log.Debug(fmt.Sprintf("Received expected %v error from %s", typeName, remote.IA))
+		//log.Debug(fmt.Sprintf("Received expected %v error from %s", typeName, remote.IA))
 		return nil
 	}
 	return common.NewBasicError(
@@ -278,13 +341,13 @@ func checkForExpectedSCMPError(err error, t scmp.Type) error {
 		err)
 }
 
-func checkForPongMessage(reply string) error {
+func checkForPongMessage(reply string, n int) error {
 	expected := pongMessageString(remote.IA, integration.Local.IA)
 	if reply != expected {
 		return common.NewBasicError("Received unexpected data", nil, "data",
 			reply, "expected", expected)
 	}
-	log.Debug(fmt.Sprintf("Received pong from %s", remote.IA))
+	//log.Debug(fmt.Sprintf("Received pong %v from %s", n, remote.IA))
 	return nil
 }
 

@@ -27,12 +27,13 @@ import (
 )
 
 var (
-	name         = "filter_integration_"
-	cmd          = "./bin/filter_base"
-	attempts     = flag.Int("attempts", 1, "Number of attempts before giving up.")
-	testFileName = flag.String("filename", "", "Name of the result and config files.")
-	srcASList    = flag.String("srcIAs", "", "Comma separated list of source IAs (clients).")
-	dstASList    = flag.String("dstIAs", "", "Comma separated list of destination IAs (servers).")
+	name                  = "filter_integration_"
+	cmd                   = "./bin/filter_base"
+	attempts              = flag.Int("attempts", 1, "Number of attempts before giving up.")
+	maxNumberOfGoRoutines = flag.Int("goRoutines", 2, "Maximum number of goroutines.")
+	testFileName          = flag.String("filename", "", "Name of the result and config files.")
+	srcASList             = flag.String("srcIAs", "", "Comma separated list of source IAs (clients).")
+	dstASList             = flag.String("dstIAs", "", "Comma separated list of destination IAs (servers).")
 )
 
 func main() {
@@ -67,7 +68,7 @@ func realMain() int {
 // RunTests runs the client and server for each IAPair.
 // In case of an error the function is terminated immediately.
 func runTests(in integration.Integration, pairs []integration.IAPair) error {
-	return integration.ExecuteTimed(in.Name(), func() error {
+	return integration.ExecuteTimed(in.Name()+"_server", func() error {
 		// First run all servers
 		dsts := integration.ExtractUniqueDsts(pairs)
 		for _, dst := range dsts {
@@ -78,20 +79,8 @@ func runTests(in integration.Integration, pairs []integration.IAPair) error {
 			}
 			defer s.Close()
 		}
-		// Now start the clients for srcDest pair
-		errorCount := 0
-		for i, conn := range pairs {
-			testInfo := fmt.Sprintf("%v -> %v (%v/%v)", conn.Src.IA, conn.Dst.IA, i+1, len(pairs))
-			log.Info(fmt.Sprintf("Test %v: %s", in.Name(), testInfo))
-			t := integration.DefaultRunTimeout + integration.CtxTimeout*time.Duration(*attempts)
-			if err := integration.RunClient(in, conn, t); err != nil {
-				log.Error(fmt.Sprintf("Error in client: %s", testInfo), "err", err)
-				errorCount++
-			}
-		}
-		if errorCount != 0 {
-			return common.NewBasicError(fmt.Sprintf("%v clients exited with an error", errorCount), nil)
-		}
-		return nil
+		// Now start the clients for srcDest pair in parallel
+		timeout := integration.DefaultRunTimeout + integration.CtxTimeout*time.Duration(*attempts)
+		return integration.RunUnaryTestsWithMoreGoRoutines(in, pairs, timeout, *maxNumberOfGoRoutines)
 	})
 }

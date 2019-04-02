@@ -39,6 +39,11 @@ pkg_tar(
         "//go/acceptance/sig_iperf_acceptance:sig_iperf_acceptance",
         "//go/acceptance/sig_ping_acceptance:sig_ping_acceptance",
         "//go/tools/topopruner:topopruner",
+        "//go/integration/filter_base:filter_base",
+        "//go/integration/filter_integration_base:filter_integration_base",
+        "//go/integration/whitelist_filter_integration:whitelist_filter_integration",
+        "//go/integration/pathlength_filter_integration:pathlength_filter_integration",
+        "//go/integration/perasratelimit_filter_integration:perasratelimit_filter_integration",
     ],
     mode = "0755",
 )

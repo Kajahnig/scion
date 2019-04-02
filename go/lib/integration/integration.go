@@ -314,10 +314,14 @@ func RunBinaryTests(in Integration, pairs []IAPair, timeout time.Duration) error
 // RunUnaryTests runs the client for each IAPair.
 // In case of an error the function is terminated immediately.
 func RunUnaryTests(in Integration, pairs []IAPair, timeout time.Duration) error {
+	return RunUnaryTestsWithMoreGoRoutines(in, pairs, timeout, 2)
+}
+
+func RunUnaryTestsWithMoreGoRoutines(in Integration, pairs []IAPair, timeout time.Duration, maxGoRoutines int) error {
 	if timeout == 0 {
 		timeout = DefaultRunTimeout
 	}
-	return runTests(in, pairs, 2, func(idx int, pair IAPair) error {
+	return runTests(in, pairs, maxGoRoutines, func(idx int, pair IAPair) error {
 		log.Info(fmt.Sprintf("Test %v: %v -> %v (%v/%v)",
 			in.Name(), pair.Src.IA, pair.Dst.IA, idx+1, len(pairs)))
 		// Start client

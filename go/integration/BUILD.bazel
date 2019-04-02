@@ -2,10 +2,15 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 go_library(
     name = "go_default_library",
-    srcs = ["common.go"],
+    srcs = [
+        "common.go",
+        "filter_common.go",
+    ],
     importpath = "github.com/scionproto/scion/go/integration",
     visibility = ["//visibility:public"],
     deps = [
+        "//go/lib/infra/modules/filters:go_default_library",
+        "//go/lib/infra/modules/filters/filter_creation:go_default_library",
         "//go/lib/integration:go_default_library",
         "//go/lib/log:go_default_library",
         "//go/lib/sciond:go_default_library",
