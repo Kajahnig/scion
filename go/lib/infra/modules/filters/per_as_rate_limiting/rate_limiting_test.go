@@ -216,6 +216,64 @@ func TestPerASRateLimitFilter_FilterPacketWithResetIntevals(t *testing.T) {
 			So(result3, ShouldEqual, filters.FilterAccept)
 		})
 	})
+
+	Convey("Filtering packets with outside per AS rate limit filtering and 10 millisecond reset intervals", t, func() {
+
+		outsideRateLimitInfo, err1 := newRateLimitFilterInfo(10*time.Millisecond, float64(1), uint32(2))
+		filter, err2 := NewPerASRateLimitFilter(
+			false, true,
+			&rateLimitFilterInfo{}, outsideRateLimitInfo)
+		So(err1, ShouldBeNil)
+		So(err2, ShouldBeNil)
+
+		outsidePacket := packetFrom(IA1_IP1, path)
+
+		result1, _ := filter.FilterPacket(outsidePacket)
+		result2, _ := filter.FilterPacket(outsidePacket)
+		result3, _ := filter.FilterPacket(outsidePacket)
+
+		Convey("Should accept an outside packet from IP1 twice, but not a 3rd time", func() {
+			So(result1, ShouldEqual, filters.FilterAccept)
+			So(result2, ShouldEqual, filters.FilterAccept)
+			So(result3, ShouldEqual, filters.FilterDrop)
+		})
+
+		for result3 == filters.FilterDrop {
+			result1 = result2
+			result2 = result3
+			result3, _ = filter.FilterPacket(outsidePacket)
+		}
+
+		Convey("After the filter has been reset, the outside packets should be accepted again", func() {
+			So(result1, ShouldEqual, filters.FilterDrop)
+			So(result2, ShouldEqual, filters.FilterDrop)
+			So(result3, ShouldEqual, filters.FilterAccept)
+		})
+
+		for i := 0; i < 2; i++ {
+			result1 = result2
+			result2 = result3
+			result3, _ = filter.FilterPacket(outsidePacket)
+		}
+
+		Convey("And after sending another packet, the following packets should be dropped again", func() {
+			So(result1, ShouldEqual, filters.FilterAccept)
+			So(result2, ShouldEqual, filters.FilterAccept)
+			So(result3, ShouldEqual, filters.FilterDrop)
+		})
+
+		for result3 == filters.FilterDrop {
+			result1 = result2
+			result2 = result3
+			result3, _ = filter.FilterPacket(outsidePacket)
+		}
+
+		Convey("And after the filter is reset again the packets should be accepted again", func() {
+			So(result1, ShouldEqual, filters.FilterDrop)
+			So(result2, ShouldEqual, filters.FilterDrop)
+			So(result3, ShouldEqual, filters.FilterAccept)
+		})
+	})
 }
 
 func packetFrom(addr snet.SCIONAddress, path *spath.Path) *snet.SCIONPacket {

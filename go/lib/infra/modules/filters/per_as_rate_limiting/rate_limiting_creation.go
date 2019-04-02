@@ -82,7 +82,7 @@ func NewPerASRateLimitFilterFromStrings(configParams []string) (*PerASRateLimitF
 			if err != nil {
 				return nil, err
 			}
-			lInterval = time.Duration(interval) * time.Second
+			oInterval = time.Duration(interval) * time.Second
 			outside = true
 		case nrOfLocalClients_flag:
 			lNumElementsToCount, err = strconv.ParseFloat(configParams[i+1], 64)
