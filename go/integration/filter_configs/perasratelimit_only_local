@@ -1,0 +1,2 @@
+//A per AS rate limit filter for local traffic
+asRateLimit -local 1 -lInterval 1 -lMax 300

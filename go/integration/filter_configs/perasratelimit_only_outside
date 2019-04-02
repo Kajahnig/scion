@@ -1,0 +1,2 @@
+//A per AS rate limit filter for outside traffic
+asRateLimit -outside 16 -oInterval 1 -oMax 100
