@@ -23,6 +23,7 @@ import (
 
 	"github.com/scionproto/scion/go/lib/common"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters/drkey_filter"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/path_length"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/per_as_rate_limiting"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/whitelisting"
@@ -33,6 +34,7 @@ const (
 	Whitelist      = "whitelist"
 	PathLength     = "pathLength"
 	PerASRateLimit = "asRateLimit"
+	DRKey          = "drkey"
 	Comment        = "//"
 )
 
@@ -80,6 +82,8 @@ func createFilter(filterConfig string, configDir string) (*filters.PacketFilter,
 		filter, err = path_length.NewPathLengthFilterFromStrings(configParams[1:])
 	case PerASRateLimit:
 		filter, err = per_as_rate_limiting.NewPerASRateLimitFilterFromStrings(configParams[1:])
+	case DRKey:
+		filter = &drkey_filter.DRKeyFilter{}
 	default:
 		if strings.HasPrefix(configParams[0], Comment) {
 			return nil, nil, false

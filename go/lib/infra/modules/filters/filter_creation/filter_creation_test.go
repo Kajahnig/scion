@@ -21,6 +21,7 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 
+	"github.com/scionproto/scion/go/lib/infra/modules/filters/drkey_filter"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/path_length"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/per_as_rate_limiting"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/whitelisting"
@@ -36,7 +37,7 @@ func Test_createFilter(t *testing.T) {
 			filterType      reflect.Type
 			typeDescription string
 		}{
-			{"whitelist -path ../whitelisting/test_topology.json -outside ISD",
+			{"whitelist -path ../whitelisting/empty_topology.json -outside ISD",
 				".",
 				reflect.TypeOf(&whitelisting.WhitelistFilter{}),
 				"Whitelist Filter"},
@@ -52,6 +53,10 @@ func Test_createFilter(t *testing.T) {
 				".",
 				reflect.TypeOf(&per_as_rate_limiting.PerASRateLimitFilter{}),
 				"Per AS Rate Limit Filter"},
+			{"drkey",
+				".",
+				reflect.TypeOf(&drkey_filter.DRKeyFilter{}),
+				"DRKey Source Auth Filter"},
 		}
 
 		for _, test := range tests {
@@ -159,7 +164,7 @@ func Test_CreateFiltersFromConfigFile(t *testing.T) {
 		})
 
 		Convey("Should return a filled filter slice", func() {
-			So(filterSlice, ShouldHaveLength, 3)
+			So(filterSlice, ShouldHaveLength, 4)
 		})
 
 		tests := []struct {
@@ -172,6 +177,8 @@ func Test_CreateFiltersFromConfigFile(t *testing.T) {
 				reflect.TypeOf(&path_length.PathLengthFilter{})},
 			{"Per AS Rate Limit Filter",
 				reflect.TypeOf(&per_as_rate_limiting.PerASRateLimitFilter{})},
+			{"DRKey Source Auth Filter",
+				reflect.TypeOf(&drkey_filter.DRKeyFilter{})},
 		}
 
 		for i, test := range tests {
