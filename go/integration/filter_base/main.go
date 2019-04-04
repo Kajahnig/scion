@@ -173,8 +173,7 @@ func determineExpectedResult() (int, int, scmp.Type, error) {
 		resultParams := strings.Fields(scanner.Text())
 		if len(resultParams) == 0 || strings.HasPrefix(resultParams[0], "//") {
 			continue
-		}
-		if resultParams[0] == localIAString && resultParams[1] == remoteIAString {
+		} else if resultParams[0] == localIAString && resultParams[1] == remoteIAString {
 			return parseResultInfo(resultParams[2:])
 		}
 	}
@@ -268,42 +267,45 @@ func (c client) AttemptRepeatedly() int {
 
 		if receivedError == expectingError {
 			counter++
-		}
-		if receivedError != expectingError || i == c.numOfRequests-1 {
-			if expectingError { //means we expected an error but did not get one
-				log.Debug(fmt.Sprintf("Received %v errors of type %v from %s",
-					counter, c.resultType.Name(scmp.C_Filtering), remote.IA))
-				if i < c.numOfRequests-1 {
-					expectingError = false
-					counter = 1
-				}
-			} else { //means we did not expect an error but we got one
-				if counter > c.maxPassingRequests {
-					log.Error(fmt.Sprintf("Received %v pong messages, which is over the limit (%v)",
-						counter, c.maxPassingRequests))
-					return 1
-				}
-				log.Debug(fmt.Sprintf("Received %v pong(s) from %s - (limit %v)",
-					counter, remote.IA, c.maxPassingRequests))
-				if i < c.numOfRequests-1 {
-					expectingError = true
-					counter = 1
-				}
+		} else {
+			if c.limitViolated(expectingError, counter) {
+				return 1
 			}
+			expectingError = !expectingError
+			counter = 1
 		}
 	}
-	if c.numOfRequests > 1 && counter == c.numOfRequests-1 {
+
+	if c.limitViolated(expectingError, counter) {
+		return 1
+	}
+	if expectingError && c.numOfRequests > 1 && counter == c.numOfRequests-1 {
 		log.Error("All requests were rejected")
 		return 1
 	}
 	if c.numOfRequests == c.maxPassingRequests && counter < c.maxPassingRequests-1 {
-		log.Debug(fmt.Sprintf("%v", counter))
-		log.Debug(fmt.Sprintf("%v", c.maxPassingRequests-1))
 		log.Error("All requests for this client should have passed")
 		return 1
 	}
 	log.Debug(fmt.Sprintf("Successfully sent %v requests", c.numOfRequests))
 	return 0
+}
+
+func (c client) limitViolated(expectingError bool, counter int) bool {
+	if expectingError { //means we expected an error but did not get one
+		log.Debug(fmt.Sprintf("Received %v errors of type %v from %s",
+			counter, c.resultType.Name(scmp.C_Filtering), remote.IA))
+
+	} else { //means we did not expect an error but we got one
+		if counter > c.maxPassingRequests {
+			log.Error(fmt.Sprintf("Received %v pong messages, which is over the limit (%v)",
+				counter, c.maxPassingRequests))
+			return true
+		}
+		log.Debug(fmt.Sprintf("Received %v pong(s) from %s - (limit %v)",
+			counter, remote.IA, c.maxPassingRequests))
+	}
+	return false
 }
 
 func (c client) ping() error {
@@ -319,7 +321,7 @@ func (c client) pong(n int) (bool, error) {
 	reply := make([]byte, 1024)
 	pktLen, err := c.conn.Read(reply)
 
-	if err != nil { //reply should be an scmp error
+	if err != nil { //reply should be an scmp error of the specific result type
 		return true, checkForExpectedSCMPError(err, c.resultType)
 	}
 	//no error received, so check for pong
