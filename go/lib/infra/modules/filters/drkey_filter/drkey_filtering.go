@@ -44,7 +44,12 @@ func (f *DRKeyFilter) FilterPacket(pkt *snet.SCIONPacket) (filters.FilterResult,
 		return filters.FilterDrop, nil
 	}
 
-	mac2, err := calculateMac(dir, pkt)
+	key, err := findDRKey(dir)
+	if err != nil {
+		return filters.FilterError, err
+	}
+
+	mac2, err := calculateMac(key, pkt)
 	if err != nil {
 		return filters.FilterError, err
 	}
@@ -67,15 +72,20 @@ func extractDirAndMac(pkt *snet.SCIONPacket) (scmp_auth.Dir, common.RawBytes, er
 			secMode := spse.SecMode(secExt[0])
 			if secMode == spse.ScmpAuthDRKey {
 				dir = scmp_auth.Dir(secExt[1])
-				mac = secExt[8:]
+				mac = secExt[5:]
 			}
 		}
 	}
 	return dir, mac, nil
 }
-func calculateMac(dir scmp_auth.Dir, pkt *snet.SCIONPacket) (common.RawBytes, error) {
-	//TODO: calculate the MAC of the Scion Packet
+func calculateMac(key string, pkt *snet.SCIONPacket) (common.RawBytes, error) {
+	//TODO: replace this function when implemented
 	return nil, nil
+}
+
+func findDRKey(dir scmp_auth.Dir) (string, error) {
+	//TODO: replace this function when implemented
+	return "key", nil
 }
 
 func (f *DRKeyFilter) SCMPError() scmp.ClassType {
