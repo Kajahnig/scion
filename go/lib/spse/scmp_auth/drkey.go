@@ -92,7 +92,7 @@ func NewDRKeyExtn() *DRKeyExtn {
 	return s
 }
 
-func (s DRKeyExtn) SetDirection(dir Dir) error {
+func (s *DRKeyExtn) SetDirection(dir Dir) error {
 	if dir > HostToHostReversed {
 		return common.NewBasicError("Invalid direction", nil, "dir", dir)
 	}
