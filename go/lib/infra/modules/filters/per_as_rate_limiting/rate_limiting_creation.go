@@ -131,6 +131,33 @@ func NewPerASRateLimitFilterFromStrings(configParams []string) (*PerASRateLimitF
 	return NewPerASRateLimitFilter(local, outside, localFilterInfo, outsideFilterInfo)
 }
 
+func NewPerASRateLimitingFilterFromConfig(cfg *PerASRateLimitConfig) (*PerASRateLimitFilter, error) {
+	local := false
+	outside := false
+	localFilterInfo := &rateLimitFilterInfo{}
+	outsideFilterInfo := &rateLimitFilterInfo{}
+
+	var err error
+
+	if cfg.LocalClients != 0 {
+		local = true
+		localFilterInfo, err = newRateLimitFilterInfo(cfg.LocalInterval.Duration,
+			float64(cfg.LocalClients), uint32(cfg.LocalMaxCount))
+		if err != nil {
+			return nil, err
+		}
+	}
+	if cfg.OutsideASes != 0 {
+		outside = true
+		outsideFilterInfo, err = newRateLimitFilterInfo(cfg.OutsideInterval.Duration,
+			float64(cfg.OutsideASes), uint32(cfg.OutsideMaxCount))
+		if err != nil {
+			return nil, err
+		}
+	}
+	return NewPerASRateLimitFilter(local, outside, localFilterInfo, outsideFilterInfo)
+}
+
 func newRateLimitFilterInfo(interval time.Duration, numElementsToCount float64, maxValue uint32) (*rateLimitFilterInfo, error) {
 
 	if interval < 1 {

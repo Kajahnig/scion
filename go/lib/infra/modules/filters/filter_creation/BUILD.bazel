@@ -2,12 +2,17 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 go_library(
     name = "go_default_library",
-    srcs = ["filter_creation.go"],
+    srcs = [
+        "filter_creation.go",
+        "packet_filters_config.go",
+    ],
     importpath = "github.com/scionproto/scion/go/lib/infra/modules/filters/filter_creation",
     visibility = ["//visibility:public"],
     deps = [
         "//go/lib/common:go_default_library",
+        "//go/lib/config:go_default_library",
         "//go/lib/infra/modules/filters:go_default_library",
+        "//go/lib/infra/modules/filters/drkey_filter:go_default_library",
         "//go/lib/infra/modules/filters/path_length:go_default_library",
         "//go/lib/infra/modules/filters/per_as_rate_limiting:go_default_library",
         "//go/lib/infra/modules/filters/whitelisting:go_default_library",
@@ -17,12 +22,18 @@ go_library(
 
 go_test(
     name = "go_default_test",
-    srcs = ["filter_creation_test.go"],
+    srcs = [
+        "filter_creation_test.go",
+        "packet_filters_config_test.go",
+    ],
     embed = [":go_default_library"],
     deps = [
+        "//go/lib/config:go_default_library",
+        "//go/lib/infra/modules/filters/drkey_filter:go_default_library",
         "//go/lib/infra/modules/filters/path_length:go_default_library",
         "//go/lib/infra/modules/filters/per_as_rate_limiting:go_default_library",
         "//go/lib/infra/modules/filters/whitelisting:go_default_library",
+        "@com_github_burntsushi_toml//:go_default_library",
         "@com_github_smartystreets_goconvey//convey:go_default_library",
     ],
 )

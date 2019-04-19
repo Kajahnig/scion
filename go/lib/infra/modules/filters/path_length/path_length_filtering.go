@@ -64,6 +64,13 @@ func NewPathLengthFilter(minLength int, maxLength int) (*PathLengthFilter, error
 	}, nil
 }
 
+func NewPathLengthFilterFromConfig(cfg *PathLengthConfig) (*PathLengthFilter, error) {
+	return &PathLengthFilter{
+		minPathLength: cfg.MinPathLength,
+		maxPathLength: cfg.MaxPathLength,
+	}, nil
+}
+
 func NewPathLengthFilterFromStrings(configParams []string) (*PathLengthFilter, error) {
 	var minLength = 0
 	var maxLength = -1

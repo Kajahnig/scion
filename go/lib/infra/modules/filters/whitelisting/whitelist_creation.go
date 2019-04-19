@@ -65,6 +65,11 @@ type WhitelistFilter struct {
 	LocalWLSetting
 }
 
+func NewWhitelistFilterFromConfig(cfg *WhitelistConfig) (*WhitelistFilter, error) {
+	return NewWhitelistFilter(cfg.PathToTopoFile, cfg.RescanInterval.Duration,
+		cfg.OutsideWLSetting.OutsideWLSetting, cfg.LocalWLSetting.LocalWLSetting)
+}
+
 func NewWhitelistFilter(pathToTopoFile string, rescanInterval time.Duration,
 	outsideWLSetting OutsideWLSetting, localWLSetting LocalWLSetting) (*WhitelistFilter, error) {
 

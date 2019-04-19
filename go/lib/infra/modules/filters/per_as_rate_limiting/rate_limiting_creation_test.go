@@ -342,3 +342,40 @@ func TestNewPerASRateLimitFilterFromStrings(t *testing.T) {
 		})
 	})
 }
+
+func TestNewPerASRateLimitFilterFromConfig(t *testing.T) {
+	cfg := &PerASRateLimitConfig{
+		LocalClients:    10,
+		OutsideASes:     5,
+		LocalInterval:   duration{5 * time.Minute},
+		OutsideInterval: duration{10 * time.Minute},
+		LocalMaxCount:   20,
+		OutsideMaxCount: 50,
+	}
+
+	Convey("Creating a per AS rate limiting filter from a configuration", t, func() {
+
+		filter, err := NewPerASRateLimitingFilterFromConfig(cfg)
+
+		Convey("Should not return an error", func() {
+			So(err, ShouldBeNil)
+		})
+
+		Convey("Should no return nil instead of a filter", func() {
+			So(filter, ShouldNotBeNil)
+		})
+
+		Convey("Should initialize the fields with the correct values", func() {
+			So(filter.localRateLimiting, ShouldBeTrue)
+			So(filter.outsideRateLimiting, ShouldBeTrue)
+			So(filter.localFilterInfo.interval, ShouldEqual, 5*time.Minute)
+			So(filter.localFilterInfo.maxValue, ShouldEqual, 20)
+			So(filter.localFilterInfo.numCells, ShouldEqual, 48)
+			So(filter.localFilterInfo.numHashFunc, ShouldEqual, 3)
+			So(filter.outsideFilterInfo.interval, ShouldEqual, 10*time.Minute)
+			So(filter.outsideFilterInfo.maxValue, ShouldEqual, 50)
+			So(filter.outsideFilterInfo.numCells, ShouldEqual, 24)
+			So(filter.outsideFilterInfo.numHashFunc, ShouldEqual, 3)
+		})
+	})
+}
