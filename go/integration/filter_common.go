@@ -68,14 +68,6 @@ func initNetworkWithFilterDispatcher() {
 	log.Debug("SCION network successfully initialized")
 }
 
-func createFilters() []*filters.PacketFilter {
-	filters, err := filter_creation.CreateFiltersFromConfigFile(FilterConfigDir, ConfigFileName)
-	if err != nil {
-		LogFatal("Unable to create filters", "err", err)
-	}
-	return filters
-}
-
 func createFiltersFromConfig() []*filters.PacketFilter {
 	var cfg filter_creation.PacketFilterConfig
 	_, err := toml.DecodeFile(FilterConfigDir+"/"+ConfigFileName+".toml", &cfg)

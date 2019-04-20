@@ -15,27 +15,11 @@
 package filter_creation
 
 import (
-	"bufio"
-	"fmt"
-	"os"
-	"reflect"
-	"strings"
-
-	"github.com/scionproto/scion/go/lib/common"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/drkey_filter"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/path_length"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/per_as_rate_limiting"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/whitelisting"
-	"github.com/scionproto/scion/go/lib/log"
-)
-
-const (
-	Whitelist      = "whitelist"
-	PathLength     = "pathLength"
-	PerASRateLimit = "asRateLimit"
-	DRKey          = "drkey"
-	Comment        = "//"
 )
 
 func CreateFiltersFromConfig(cfg PacketFilterConfig) ([]*filters.PacketFilter, error) {
@@ -73,64 +57,4 @@ func CreateFiltersFromConfig(cfg PacketFilterConfig) ([]*filters.PacketFilter, e
 		results = append(results, &filter)
 	}
 	return results, nil
-}
-
-func CreateFiltersFromConfigFile(configDir string, configFileName string) ([]*filters.PacketFilter, error) {
-	configFile, err := os.Open(configDir + "/" + configFileName)
-	if err != nil {
-		return nil, err
-	}
-	defer configFile.Close()
-
-	scanner := bufio.NewScanner(configFile)
-	var results []*filters.PacketFilter
-	for scanner.Scan() {
-		filter, err, add := createFilter(scanner.Text(), configDir)
-		if err != nil {
-			return nil, err
-		}
-		if add {
-			results = append(results, filter)
-			log.Debug(fmt.Sprintf("Added %v filter to PacketFilter slice", reflect.TypeOf(*filter)))
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-	return results, nil
-}
-
-func createFilter(filterConfig string, configDir string) (*filters.PacketFilter, error, bool) {
-	configParams := strings.Fields(filterConfig)
-
-	if len(configParams) == 0 {
-		return nil, nil, false
-	}
-
-	log.Debug("Trying to create Filter from string " + filterConfig)
-
-	var filter filters.PacketFilter
-	var err error
-
-	switch configParams[0] {
-	case Whitelist:
-		filter, err = whitelisting.NewWhitelistFilterFromStrings(configParams[1:], configDir)
-	case PathLength:
-		filter, err = path_length.NewPathLengthFilterFromStrings(configParams[1:])
-	case PerASRateLimit:
-		filter, err = per_as_rate_limiting.NewPerASRateLimitFilterFromStrings(configParams[1:])
-	case DRKey:
-		filter = &drkey_filter.DRKeyFilter{}
-	default:
-		if strings.HasPrefix(configParams[0], Comment) {
-			return nil, nil, false
-		}
-		err = common.NewBasicError("No matching filter found for configuration", nil, "line", filterConfig)
-	}
-
-	if err != nil {
-		return nil, err, false
-	}
-	log.Debug("Successfully created " + configParams[0] + " filter")
-	return &filter, nil, true
 }

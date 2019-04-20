@@ -1,2 +1,0 @@
-//A path length filter with min path length 2 and max 2
-pathLength -min 2 -max 2

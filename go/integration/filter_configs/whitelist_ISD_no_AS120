@@ -1,4 +1,0 @@
-//A whitelist filter with
-//Outside filtering set to only let packets from the same ISD pass
-//And local filtering set to the default (no whitelist)
-whitelist -path ./gen/ISD1/ASff00_0_120/br1-ff00_0_120-1/topology.json -outside ISD
