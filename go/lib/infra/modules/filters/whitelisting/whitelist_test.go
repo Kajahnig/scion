@@ -223,7 +223,7 @@ func packetFrom(addr snet.SCIONAddress) *snet.SCIONPacket {
 func WhitelistFilterWithSettings(outsideSetting OutsideWLSetting, localSetting LocalWLSetting) *WhitelistFilter {
 	return &WhitelistFilter{
 		pathToTopoFile:    pathToFile,
-		rescanInterval:    defaultInterval,
+		rescanInterval:    defaultRescanningInterval,
 		localIA:           localIA,
 		neighbouringNodes: scannedNeighbours,
 		localInfraNodes:   scannedInfraNodes,

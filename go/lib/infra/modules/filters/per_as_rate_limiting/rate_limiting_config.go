@@ -54,38 +54,48 @@ type PerASRateLimitConfig struct {
 }
 
 func (cfg *PerASRateLimitConfig) InitDefaults() {
-	if cfg.LocalInterval.Duration == 0 {
-		cfg.LocalInterval = duration{defaultInterval}
+
+	if cfg.LocalClients > 0 {
+		if cfg.LocalInterval.Duration == 0 {
+			cfg.LocalInterval = duration{defaultInterval}
+		}
+		if cfg.LocalMaxCount == 0 {
+			cfg.LocalMaxCount = int(defaultMaxCount)
+		}
 	}
-	if cfg.OutsideInterval.Duration == 0 {
-		cfg.OutsideInterval = duration{defaultInterval}
-	}
-	if cfg.LocalMaxCount == 0 {
-		cfg.LocalMaxCount = int(defaultMaxCount)
-	}
-	if cfg.OutsideMaxCount == 0 {
-		cfg.OutsideMaxCount = int(defaultMaxCount)
+	if cfg.OutsideASes > 0 {
+		if cfg.OutsideInterval.Duration == 0 {
+			cfg.OutsideInterval = duration{defaultInterval}
+		}
+		if cfg.OutsideMaxCount == 0 {
+			cfg.OutsideMaxCount = int(defaultMaxCount)
+		}
 	}
 }
 
 func (cfg *PerASRateLimitConfig) Validate() error {
 	if cfg.LocalClients < 0 {
 		return common.NewBasicError("Number of local clients is negative", nil)
+	} else if cfg.LocalClients > 0 {
+		if cfg.LocalInterval.Duration <= 0 {
+			return common.NewBasicError("Local interval is negative or zero", nil)
+		}
+		if cfg.LocalMaxCount <= 0 || cfg.LocalMaxCount >= 65536 {
+			return common.NewBasicError("Local Max count is smaller or equal to zero", nil)
+		}
 	}
 	if cfg.OutsideASes < 0 {
 		return common.NewBasicError("Number of outside ASes is negative", nil)
+	} else if cfg.OutsideASes > 0 {
+		if cfg.OutsideInterval.Duration <= 0 {
+			return common.NewBasicError("Outside interval is negative or zero", nil)
+		}
+		if cfg.OutsideMaxCount <= 0 || cfg.OutsideMaxCount >= 65536 {
+			return common.NewBasicError("Outside Max count is smaller or equal to zero", nil)
+		}
 	}
-	if cfg.LocalInterval.Duration <= 0 {
-		return common.NewBasicError("Local interval is negative", nil)
-	}
-	if cfg.OutsideInterval.Duration <= 0 {
-		return common.NewBasicError("Outside interval is negative", nil)
-	}
-	if cfg.LocalMaxCount <= 0 {
-		return common.NewBasicError("Local Max count is smaller or equal to zero", nil)
-	}
-	if cfg.OutsideMaxCount <= 0 {
-		return common.NewBasicError("Outside Max count is smaller or equal to zero", nil)
+	if cfg.LocalClients == 0 && cfg.OutsideASes == 0 {
+		return common.NewBasicError("No rate limiting configured (client and AS count both missing)", nil)
 	}
 	return nil
 }

@@ -17,7 +17,6 @@ package per_as_rate_limiting
 import (
 	"context"
 	"math"
-	"strconv"
 	"time"
 
 	"github.com/scionproto/scion/go/lib/common"
@@ -27,16 +26,9 @@ import (
 )
 
 const (
-	nrOfLocalClients_flag = "-local"
-	nrOfOutsideASes_flag  = "-outside"
-
-	localInterval_flag   = "-lInterval"
-	outsideInterval_flag = "-oInterval"
 	//5 minutes default interval
 	defaultInterval = 300 * time.Second
 
-	localMaxCount_flag   = "-lMax"
-	outsideMaxCount_flag = "-oMax"
 	//expected is 60 packets for non core, 120 for core ASes, plus 30% is 78 resp. 156 packets
 	defaultMaxCount uint32 = 156
 )
@@ -61,83 +53,18 @@ type rateLimitFilterInfo struct {
 	maxValue    uint32
 }
 
-func NewPerASRateLimitFilterFromStrings(configParams []string) (*PerASRateLimitFilter, error) {
-	var lInterval, oInterval = defaultInterval, defaultInterval
-	var lNumElementsToCount, oNumElementsToCount float64 = 0, 0
-	var lMaxValue, oMaxValue = defaultMaxCount, defaultMaxCount
-	var local, outside = false, false
-	var err error
-
-	for i := 0; i < len(configParams); i += 2 {
-		switch configParams[i] {
-		case localInterval_flag:
-			interval, err := strconv.ParseInt(configParams[i+1], 10, 32)
-			if err != nil {
-				return nil, err
-			}
-			lInterval = time.Duration(interval) * time.Second
-			local = true
-		case outsideInterval_flag:
-			interval, err := strconv.ParseInt(configParams[i+1], 10, 32)
-			if err != nil {
-				return nil, err
-			}
-			oInterval = time.Duration(interval) * time.Second
-			outside = true
-		case nrOfLocalClients_flag:
-			lNumElementsToCount, err = strconv.ParseFloat(configParams[i+1], 64)
-			if err != nil {
-				return nil, err
-			}
-			local = true
-		case nrOfOutsideASes_flag:
-			oNumElementsToCount, err = strconv.ParseFloat(configParams[i+1], 64)
-			if err != nil {
-				return nil, err
-			}
-			outside = true
-		case localMaxCount_flag:
-			lMaxValue64, err := strconv.ParseInt(configParams[i+1], 10, 32)
-			if err != nil {
-				return nil, err
-			}
-			lMaxValue = uint32(lMaxValue64)
-			local = true
-		case outsideMaxCount_flag:
-			oMaxValue64, err := strconv.ParseInt(configParams[i+1], 10, 32)
-			if err != nil {
-				return nil, err
-			}
-			oMaxValue = uint32(oMaxValue64)
-			outside = true
-		}
-	}
-	localFilterInfo := &rateLimitFilterInfo{}
-	outsideFilterInfo := &rateLimitFilterInfo{}
-
-	if local {
-		localFilterInfo, err = newRateLimitFilterInfo(lInterval, lNumElementsToCount, lMaxValue)
-		if err != nil {
-			return nil, err
-		}
-	}
-	if outside {
-		outsideFilterInfo, err = newRateLimitFilterInfo(oInterval, oNumElementsToCount, oMaxValue)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return NewPerASRateLimitFilter(local, outside, localFilterInfo, outsideFilterInfo)
-}
-
 func NewPerASRateLimitingFilterFromConfig(cfg *PerASRateLimitConfig) (*PerASRateLimitFilter, error) {
+	var err error
+	err = cfg.Validate()
+	if err != nil {
+		return nil, err
+	}
+	cfg.InitDefaults()
+
 	local := false
 	outside := false
 	localFilterInfo := &rateLimitFilterInfo{}
 	outsideFilterInfo := &rateLimitFilterInfo{}
-
-	var err error
 
 	if cfg.LocalClients != 0 {
 		local = true
@@ -155,23 +82,10 @@ func NewPerASRateLimitingFilterFromConfig(cfg *PerASRateLimitConfig) (*PerASRate
 			return nil, err
 		}
 	}
-	return NewPerASRateLimitFilter(local, outside, localFilterInfo, outsideFilterInfo)
+	return newPerASRateLimitFilter(local, outside, localFilterInfo, outsideFilterInfo)
 }
 
 func newRateLimitFilterInfo(interval time.Duration, numElementsToCount float64, maxValue uint32) (*rateLimitFilterInfo, error) {
-
-	if interval < 1 {
-		return nil, common.NewBasicError("Interval for the rate limiting filter is too small",
-			nil, "interval", interval)
-	}
-	if maxValue < 1 || maxValue >= 65536 {
-		return nil, common.NewBasicError("maximum value for the rate limiting filter has an illegal value",
-			nil, "maxValue", maxValue)
-	}
-	if numElementsToCount < 1 {
-		return nil, common.NewBasicError("the number of elements to count for must be bigger than 1",
-			nil, "number of elements", numElementsToCount)
-	}
 
 	numCells, numHashFunc := calculateOptimalParameters(numElementsToCount)
 	return &rateLimitFilterInfo{
@@ -194,7 +108,7 @@ func calculateOptimalParameters(numOfElementsToCount float64) (uint32, uint32) {
 	return uint32(math.Max(numberOfCells, 1)), uint32(numberOfHashFunctions2)
 }
 
-func NewPerASRateLimitFilter(localRateLimiting, outsideRateLimiting bool,
+func newPerASRateLimitFilter(localRateLimiting, outsideRateLimiting bool,
 	localFilterInfo, outsideFilterInfo *rateLimitFilterInfo) (*PerASRateLimitFilter, error) {
 
 	if !localRateLimiting && !outsideRateLimiting {

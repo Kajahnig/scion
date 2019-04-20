@@ -71,7 +71,7 @@ func TestWhitelistConfig_InitDefaults(t *testing.T) {
 		cfg.InitDefaults()
 
 		Convey("Set the rescan intervals to the default value", func() {
-			So(cfg.RescanInterval.Duration, ShouldEqual, defaultInterval)
+			So(cfg.RescanInterval.Duration, ShouldEqual, defaultRescanningInterval)
 		})
 	})
 }

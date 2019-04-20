@@ -47,7 +47,7 @@ type WhitelistConfig struct {
 
 func (cfg *WhitelistConfig) InitDefaults() {
 	if cfg.RescanInterval.Duration == 0 {
-		cfg.RescanInterval = duration{24 * time.Hour}
+		cfg.RescanInterval = duration{defaultRescanningInterval}
 	}
 }
 
@@ -93,15 +93,15 @@ type outsideSetting struct {
 func (s *outsideSetting) UnmarshalText(text []byte) error {
 	stringFormat := string(text)
 	switch stringFormat {
-	case ISD_value:
+	case ISD:
 		s.OutsideWLSetting = WLISD
-	case allNeighbours_value:
+	case allNeighbours:
 		s.OutsideWLSetting = WLAllNeighbours
-	case upAndDownNeighbours_value:
+	case upAndDownNeighbours:
 		s.OutsideWLSetting = WLUpAndDownNeighbours
-	case coreNeighbours_value:
+	case coreNeighbours:
 		s.OutsideWLSetting = WLCoreNeighbours
-	case no_value:
+	case no:
 		s.OutsideWLSetting = NoOutsideWL
 	default:
 		return common.NewBasicError("Unknown value for outside whitelist setting",
@@ -117,11 +117,11 @@ type localSetting struct {
 func (s *localSetting) UnmarshalText(text []byte) error {
 	stringFormat := string(text)
 	switch stringFormat {
-	case AS_value:
+	case AS:
 		s.LocalWLSetting = WLLocalAS
-	case infra_value:
+	case infra:
 		s.LocalWLSetting = WLLocalInfraNodes
-	case no_value:
+	case no:
 		s.LocalWLSetting = NoLocalWL
 	default:
 		return common.NewBasicError("Unknown value for local whitelist setting",

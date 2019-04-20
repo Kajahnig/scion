@@ -16,7 +16,6 @@ package whitelisting
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -26,7 +25,6 @@ import (
 )
 
 const (
-	defaultInterval     = 24 * time.Hour
 	defaultTestInterval = 100 * time.Millisecond
 	pathToFile          = "./topology.json"
 	pathToFileEmptyFile = "./empty_topology.json"
@@ -50,13 +48,13 @@ var (
 	emptyInfraNodesMap         = map[string]string{}
 )
 
-func Test_NewWhitelistFilter(t *testing.T) {
+func Test_newWhitelistFilter(t *testing.T) {
 
 	Convey("Creating a new filter", t, func() {
 
 		Convey("With valid settings", func() {
 
-			filter, err := NewWhitelistFilter(pathToFile, defaultInterval, WLAllNeighbours, WLLocalInfraNodes)
+			filter, err := newWhitelistFilter(pathToFile, defaultRescanningInterval, WLAllNeighbours, WLLocalInfraNodes)
 
 			Convey("Should not return an error", func() {
 				So(err, ShouldBeNil)
@@ -71,144 +69,6 @@ func Test_NewWhitelistFilter(t *testing.T) {
 				So(filter.localInfraNodes, ShouldResemble, scannedInfraNodes)
 			})
 		})
-
-		tests := []struct {
-			description        string
-			pathToTopoFile     string
-			rescanningInterval time.Duration
-			outsideSettings    OutsideWLSetting
-			localSettings      LocalWLSetting
-		}{
-			{"With an invalid path to the topology file",
-				"invalidPath", defaultInterval, WLAllNeighbours, WLLocalInfraNodes},
-			{"With rescanning interval 0",
-				pathToFile, 0, WLAllNeighbours, WLLocalInfraNodes},
-			{"With no outside whitelisting and no local whitelisting",
-				pathToFile, defaultInterval, NoOutsideWL, NoLocalWL},
-		}
-
-		for _, test := range tests {
-
-			Convey(test.description, func() {
-
-				filter, err := NewWhitelistFilter(test.pathToTopoFile, test.rescanningInterval, test.outsideSettings, test.localSettings)
-
-				Convey("Should return an error", func() {
-					So(err, ShouldNotBeNil)
-				})
-
-				Convey("Should return nil instead of a filter", func() {
-					So(filter, ShouldBeNil)
-				})
-			})
-
-		}
-	})
-}
-
-func Test_NewWhitelistFilterFromStrings(t *testing.T) {
-
-	Convey("Creating a whitelisting filter with the string", t, func() {
-
-		tests := []struct {
-			configString          []string
-			pathToTopoFile        string
-			rescanInterval        time.Duration
-			outsideSettings       OutsideWLSetting
-			localSettings         LocalWLSetting
-			expectedNeighboursMap map[addr.IA]string
-			expectedInfraNodeMap  map[string]string
-		}{
-			{[]string{outsideWL_flag, no_value, localWL_flag, AS_value},
-				"./topology.json", defaultRescanningInterval,
-				NoOutsideWL, WLLocalAS,
-				emptyNeighboursMap, emptyInfraNodesMap},
-			{[]string{rescanInterval_flag, "3", outsideWL_flag, ISD_value, localWL_flag, infra_value},
-				"./topology.json", 3 * time.Minute,
-				WLISD, WLLocalInfraNodes,
-				emptyNeighboursMap, scannedInfraNodes},
-			{[]string{rescanInterval_flag, "6000", outsideWL_flag, allNeighbours_value, localWL_flag, no_value},
-				"./topology.json", 6000 * time.Minute,
-				WLAllNeighbours, NoLocalWL,
-				scannedNeighbours, emptyInfraNodesMap},
-			{[]string{outsideWL_flag, upAndDownNeighbours_value},
-				"./topology.json", defaultRescanningInterval,
-				WLUpAndDownNeighbours, NoLocalWL,
-				scannedUpAndDownNeighbours, emptyInfraNodesMap},
-			{[]string{outsideWL_flag, coreNeighbours_value},
-				"./topology.json", defaultRescanningInterval,
-				WLCoreNeighbours, NoLocalWL,
-				emptyNeighboursMap, emptyInfraNodesMap},
-			{[]string{localWL_flag, infra_value},
-				"./topology.json", defaultRescanningInterval,
-				NoOutsideWL, WLLocalInfraNodes,
-				emptyNeighboursMap, scannedInfraNodes},
-			{[]string{path_flag, "./empty_topology.json", outsideWL_flag, allNeighbours_value, localWL_flag, infra_value},
-				"./empty_topology.json", defaultRescanningInterval,
-				WLAllNeighbours, WLLocalInfraNodes,
-				emptyNeighboursMap, emptyInfraNodesMap},
-		}
-
-		for _, test := range tests {
-
-			Convey(strings.Join(test.configString, " "), func() {
-
-				filter, err := NewWhitelistFilterFromStrings(test.configString, ".")
-
-				Convey("Should not return an error", func() {
-					So(err, ShouldBeNil)
-				})
-
-				Convey(fmt.Sprintf("Should set path to %v", test.pathToTopoFile), func() {
-					So(filter.pathToTopoFile, ShouldResemble, test.pathToTopoFile)
-				})
-
-				Convey(fmt.Sprintf("Should set the rescanning interval to %v", test.rescanInterval), func() {
-					So(filter.rescanInterval, ShouldResemble, test.rescanInterval)
-				})
-
-				Convey(fmt.Sprintf("Should set outside settings to %v", test.outsideSettings.toString()), func() {
-					So(filter.OutsideWLSetting, ShouldResemble, test.outsideSettings)
-				})
-
-				Convey(fmt.Sprintf("Should set local settings to %v", test.localSettings.toString()), func() {
-					So(filter.LocalWLSetting, ShouldResemble, test.localSettings)
-				})
-
-				Convey("Should initialize the maps of the filter correctly", func() {
-					So(filter.neighbouringNodes, ShouldResemble, test.expectedNeighboursMap)
-					So(filter.localInfraNodes, ShouldResemble, test.expectedInfraNodeMap)
-				})
-
-			})
-		}
-	})
-
-	Convey("Creating a whitelisting filter with the strings", t, func() {
-
-		tests := []struct {
-			configString []string
-		}{
-			{[]string{path_flag, "invalidPath", localWL_flag, AS_value}},  //invalid path to topo file
-			{[]string{rescanInterval_flag, "-3", localWL_flag, AS_value}}, //invalid value for rescanning Interval
-			{[]string{outsideWL_flag, no_value, localWL_flag, no_value}},  //no value for local and outside
-			{[]string{outsideWL_flag, no_value}},
-			{[]string{localWL_flag, no_value}},
-			{[]string{}},
-		}
-
-		for _, test := range tests {
-
-			Convey(strings.Join(test.configString, " "), func() {
-
-				filter, err := NewWhitelistFilterFromStrings(test.configString, ".")
-
-				Convey("Should return an error and nil instead of a filter", func() {
-					So(err, ShouldNotBeNil)
-					So(filter, ShouldBeNil)
-				})
-			})
-		}
 	})
 }
 
@@ -238,7 +98,7 @@ func Test_rescanTopoFile(t *testing.T) {
 
 			Convey(test.outsideSettings.toString(), func() {
 
-				filter, err := NewWhitelistFilter(pathToFileEmptyFile, defaultInterval, test.outsideSettings, WLLocalAS)
+				filter, err := newWhitelistFilter(pathToFileEmptyFile, defaultRescanningInterval, test.outsideSettings, WLLocalAS)
 
 				So(err, ShouldBeNil)
 				So(filter.neighbouringNodes, ShouldBeEmpty)
@@ -279,7 +139,7 @@ func Test_rescanTopoFile(t *testing.T) {
 
 			Convey(test.localSettings.toString(), func() {
 
-				filter, err := NewWhitelistFilter(pathToFileEmptyFile, defaultInterval, WLISD, test.localSettings)
+				filter, err := newWhitelistFilter(pathToFileEmptyFile, defaultRescanningInterval, WLISD, test.localSettings)
 
 				So(err, ShouldBeNil)
 				So(filter.neighbouringNodes, ShouldBeEmpty)
@@ -305,7 +165,7 @@ func Test_periodicRescanningOfTheTopoFile(t *testing.T) {
 
 	Convey("Creating a filter with settings: WLAllNeighbours, WLLocalInfraNodes", t, func() {
 
-		filter, _ := NewWhitelistFilter(pathToFileEmptyFile, defaultTestInterval, WLAllNeighbours, WLLocalInfraNodes)
+		filter, _ := newWhitelistFilter(pathToFileEmptyFile, defaultTestInterval, WLAllNeighbours, WLLocalInfraNodes)
 
 		Convey("Should initialize the maps empty because the topology file is empty", func() {
 			So(filter.neighbouringNodes, ShouldBeEmpty)
@@ -329,7 +189,7 @@ func Test_periodicRescanningOfTheTopoFile(t *testing.T) {
 
 	Convey("Creating a filter with settings: NoOutsideWL, WLLocalInfraNodes", t, func() {
 
-		filter, _ := NewWhitelistFilter(pathToFileEmptyFile, defaultTestInterval, NoOutsideWL, WLLocalInfraNodes)
+		filter, _ := newWhitelistFilter(pathToFileEmptyFile, defaultTestInterval, NoOutsideWL, WLLocalInfraNodes)
 
 		Convey("Should initialize the maps empty because the topology file is empty", func() {
 			So(filter.neighbouringNodes, ShouldBeEmpty)
@@ -353,7 +213,7 @@ func Test_periodicRescanningOfTheTopoFile(t *testing.T) {
 
 	Convey("Creating a filter with settings: WLAllNeighbours, NoLocalWL", t, func() {
 
-		filter, _ := NewWhitelistFilter(pathToFileEmptyFile, defaultTestInterval, WLAllNeighbours, NoLocalWL)
+		filter, _ := newWhitelistFilter(pathToFileEmptyFile, defaultTestInterval, WLAllNeighbours, NoLocalWL)
 
 		Convey("Should initialize the maps empty because the topology file is empty", func() {
 			So(filter.neighbouringNodes, ShouldBeEmpty)
@@ -377,7 +237,7 @@ func Test_periodicRescanningOfTheTopoFile(t *testing.T) {
 
 	Convey("Creating a filter with settings: WLISD, WLLocalAS", t, func() {
 
-		filter, _ := NewWhitelistFilter(pathToFileEmptyFile, defaultTestInterval, WLISD, WLLocalAS)
+		filter, _ := newWhitelistFilter(pathToFileEmptyFile, defaultTestInterval, WLISD, WLLocalAS)
 
 		Convey("Should initialize the maps empty because the topology file is empty", func() {
 			So(filter.neighbouringNodes, ShouldBeEmpty)

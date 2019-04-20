@@ -27,7 +27,6 @@ import (
 	"github.com/scionproto/scion/go/integration"
 	"github.com/scionproto/scion/go/lib/addr"
 	"github.com/scionproto/scion/go/lib/common"
-	"github.com/scionproto/scion/go/lib/infra/modules/filters/filter_creation"
 	libint "github.com/scionproto/scion/go/lib/integration"
 	"github.com/scionproto/scion/go/lib/log"
 	"github.com/scionproto/scion/go/lib/sciond"
@@ -194,15 +193,15 @@ func parseResultInfo(resultParams []string) (int, int, scmp.Type, error) {
 	case "no":
 		resultType = scmp.Type(100)
 		numOfSuccessfulRequests = 1
-	case filter_creation.Whitelist:
+	case "whitelist":
 		resultType = scmp.T_F_NotOnWhitelist
-	case filter_creation.PathLength:
+	case "pathLength":
 		resultType = scmp.T_F_PathLengthNotAccepted
-	case filter_creation.PerASRateLimit:
+	case "asRateLimit":
 		resultType = scmp.T_F_ASOrClientRateLimitReached
 	default:
 		err = common.NewBasicError("No matching result type found",
-			nil, "input", resultParams[2])
+			nil, "input", resultParams[0])
 	}
 	if len(resultParams) > 1 && err == nil {
 		infoParams := strings.Split(resultParams[1], ",")

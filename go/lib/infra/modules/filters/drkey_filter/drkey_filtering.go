@@ -25,11 +25,6 @@ import (
 	"github.com/scionproto/scion/go/lib/spse/scmp_auth"
 )
 
-var SCMPClassType = scmp.ClassType{
-	Class: scmp.C_Filtering,
-	Type:  scmp.T_F_NoDRKeyAuthentication,
-}
-
 var _ filters.PacketFilter = (*DRKeyFilter)(nil)
 
 type DRKeyFilter struct{}
@@ -89,5 +84,8 @@ func findDRKey(dir scmp_auth.Dir) (string, error) {
 }
 
 func (f *DRKeyFilter) SCMPError() scmp.ClassType {
-	return SCMPClassType
+	return scmp.ClassType{
+		Class: scmp.C_Filtering,
+		Type:  scmp.T_F_NoDRKeyAuthentication,
+	}
 }

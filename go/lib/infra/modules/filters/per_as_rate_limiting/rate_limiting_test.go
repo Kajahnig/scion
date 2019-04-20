@@ -40,10 +40,13 @@ var (
 
 func TestPerASRateLimitFilter_FilterPacket(t *testing.T) {
 
-	localConfigAS2maxCount3 := []string{nrOfLocalClients_flag, "2", localMaxCount_flag, "3", localInterval_flag, "300"}
-	outsideConfigAS2maxCount3 := []string{nrOfOutsideASes_flag, "2", outsideMaxCount_flag, "3", outsideInterval_flag, "300"}
-	bothConfigAS1localCount1OutsideCount2 := []string{nrOfLocalClients_flag, "1", localMaxCount_flag, "1", localInterval_flag, "300",
-		nrOfOutsideASes_flag, "1", outsideMaxCount_flag, "2", outsideInterval_flag, "300"}
+	localConfigAS2maxCount3 := &PerASRateLimitConfig{LocalClients: 2, LocalMaxCount: 3}
+	outsideConfigAS2maxCount3 := &PerASRateLimitConfig{OutsideASes: 2, OutsideMaxCount: 3}
+	bothConfigAS1localCount1OutsideCount2 := &PerASRateLimitConfig{LocalClients: 1, LocalMaxCount: 1, OutsideASes: 1, OutsideMaxCount: 2}
+
+	localConfigAS2maxCount3.InitDefaults()
+	outsideConfigAS2maxCount3.InitDefaults()
+	bothConfigAS1localCount1OutsideCount2.InitDefaults()
 
 	Convey("Filtering packets with a per AS rate limit filter", t, func() {
 
@@ -51,7 +54,7 @@ func TestPerASRateLimitFilter_FilterPacket(t *testing.T) {
 
 			var result filters.FilterResult
 
-			localFilter, err := NewPerASRateLimitFilterFromStrings(localConfigAS2maxCount3)
+			localFilter, err := NewPerASRateLimitingFilterFromConfig(localConfigAS2maxCount3)
 
 			So(err, ShouldBeNil)
 
@@ -91,7 +94,7 @@ func TestPerASRateLimitFilter_FilterPacket(t *testing.T) {
 
 			var result filters.FilterResult
 
-			outsideFilter, err := NewPerASRateLimitFilterFromStrings(outsideConfigAS2maxCount3)
+			outsideFilter, err := NewPerASRateLimitingFilterFromConfig(outsideConfigAS2maxCount3)
 
 			So(err, ShouldBeNil)
 
@@ -127,7 +130,7 @@ func TestPerASRateLimitFilter_FilterPacket(t *testing.T) {
 
 			var resultO1, resultO2, resultL1, resultL2 filters.FilterResult
 
-			filter, err := NewPerASRateLimitFilterFromStrings(bothConfigAS1localCount1OutsideCount2)
+			filter, err := NewPerASRateLimitingFilterFromConfig(bothConfigAS1localCount1OutsideCount2)
 
 			So(err, ShouldBeNil)
 
@@ -162,7 +165,7 @@ func TestPerASRateLimitFilter_FilterPacketWithResetIntevals(t *testing.T) {
 	Convey("Filtering packets with local per AS rate limit filtering and 10 millisecond reset intervals", t, func() {
 
 		localRateLimitInfo, err1 := newRateLimitFilterInfo(10*time.Millisecond, float64(1), uint32(2))
-		filter, err2 := NewPerASRateLimitFilter(
+		filter, err2 := newPerASRateLimitFilter(
 			true, false,
 			localRateLimitInfo, &rateLimitFilterInfo{})
 		So(err1, ShouldBeNil)
@@ -220,7 +223,7 @@ func TestPerASRateLimitFilter_FilterPacketWithResetIntevals(t *testing.T) {
 	Convey("Filtering packets with outside per AS rate limit filtering and 10 millisecond reset intervals", t, func() {
 
 		outsideRateLimitInfo, err1 := newRateLimitFilterInfo(10*time.Millisecond, float64(1), uint32(2))
-		filter, err2 := NewPerASRateLimitFilter(
+		filter, err2 := newPerASRateLimitFilter(
 			false, true,
 			&rateLimitFilterInfo{}, outsideRateLimitInfo)
 		So(err1, ShouldBeNil)

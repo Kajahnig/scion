@@ -16,7 +16,6 @@ package per_as_rate_limiting
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -71,52 +70,23 @@ func Test_calculateOptimalParameters(t *testing.T) {
 func Test_newRateLimitFilterInfo(t *testing.T) {
 
 	Convey("Creating a new rate limit filter info ", t, func() {
-		tests := []struct {
-			interval      time.Duration
-			numOfElements float64
-			maxValue      uint32
-		}{
-			{0, 26, 5},
-			{60, 26, 0},
-			{60, 26, 65536},
-			{60, 0, 5},
-			{60, 26, 5},
-		}
-		for _, test := range tests[:4] {
+		Convey(fmt.Sprintf("With interval %v, max value %v and %v elements",
+			60, 5, 26), func() {
 
-			Convey(fmt.Sprintf("With interval %v, max value %v and %v elements",
-				test.interval, test.maxValue, test.numOfElements), func() {
+			info, err := newRateLimitFilterInfo(60, 26, 5)
 
-				_, err := newRateLimitFilterInfo(test.interval, test.numOfElements, test.maxValue)
-
-				Convey("Should return an error", func() {
-					So(err, ShouldNotBeNil)
-				})
+			Convey("Should not return an error", func() {
+				So(err, ShouldBeNil)
 			})
-		}
 
-		for _, test := range tests[4:] {
+			Convey("Should return a correct filter info", func() {
 
-			Convey(fmt.Sprintf("With interval %v, max value %v and %v elements",
-				test.interval, test.maxValue, test.numOfElements), func() {
-
-				info, err := newRateLimitFilterInfo(test.interval, test.numOfElements, test.maxValue)
-
-				Convey("Should not return an error", func() {
-					So(err, ShouldBeNil)
-				})
-
-				Convey(fmt.Sprintf("Should return an info with interval %v, max value %v, "+
-					"%v cells and %v hash functions",
-					test.interval, test.maxValue, 125, 3), func() {
-
-					So(info.interval, ShouldEqual, test.interval)
-					So(info.maxValue, ShouldEqual, test.maxValue)
-					So(info.numCells, ShouldEqual, 125)
-					So(info.numHashFunc, ShouldEqual, 3)
-				})
+				So(info.interval, ShouldEqual, 60)
+				So(info.maxValue, ShouldEqual, 5)
+				So(info.numCells, ShouldEqual, 125)
+				So(info.numHashFunc, ShouldEqual, 3)
 			})
-		}
+		})
 	})
 }
 
@@ -161,7 +131,7 @@ func TestNewPerASRateLimitFilter(t *testing.T) {
 
 			Convey(test.description, func() {
 
-				_, err := NewPerASRateLimitFilter(test.local, test.outside, test.localInfo, test.outsideInfo)
+				_, err := newPerASRateLimitFilter(test.local, test.outside, test.localInfo, test.outsideInfo)
 
 				Convey("Should return an error", func() {
 					So(err, ShouldNotBeNil)
@@ -171,7 +141,7 @@ func TestNewPerASRateLimitFilter(t *testing.T) {
 		for _, test := range tests[3:4] {
 			Convey(test.description, func() {
 
-				filter, err := NewPerASRateLimitFilter(test.local, test.outside, test.localInfo, test.outsideInfo)
+				filter, err := newPerASRateLimitFilter(test.local, test.outside, test.localInfo, test.outsideInfo)
 
 				Convey("Should not return an error", func() {
 					So(err, ShouldBeNil)
@@ -187,7 +157,7 @@ func TestNewPerASRateLimitFilter(t *testing.T) {
 		for _, test := range tests[4:5] {
 			Convey(test.description, func() {
 
-				filter, err := NewPerASRateLimitFilter(test.local, test.outside, test.localInfo, test.outsideInfo)
+				filter, err := newPerASRateLimitFilter(test.local, test.outside, test.localInfo, test.outsideInfo)
 
 				Convey("Should not return an error", func() {
 					So(err, ShouldBeNil)
@@ -203,7 +173,7 @@ func TestNewPerASRateLimitFilter(t *testing.T) {
 		for _, test := range tests[5:6] {
 			Convey(test.description, func() {
 
-				filter, err := NewPerASRateLimitFilter(test.local, test.outside, test.localInfo, test.outsideInfo)
+				filter, err := newPerASRateLimitFilter(test.local, test.outside, test.localInfo, test.outsideInfo)
 
 				Convey("Should not return an error", func() {
 					So(err, ShouldBeNil)
@@ -218,128 +188,6 @@ func TestNewPerASRateLimitFilter(t *testing.T) {
 				})
 			})
 		}
-	})
-}
-
-func TestNewPerASRateLimitFilterFromStrings(t *testing.T) {
-
-	Convey("Creating a per AS rate limiting filter from the strings", t, func() {
-
-		testsWithErrors := []struct {
-			configString []string
-		}{
-			{[]string{nrOfLocalClients_flag, "10", localInterval_flag, "0"}},
-			{[]string{nrOfLocalClients_flag, "10", localMaxCount_flag, "70000"}},
-			{[]string{nrOfOutsideASes_flag, "10", localInterval_flag, "60"}},
-		}
-
-		for _, test := range testsWithErrors {
-
-			Convey(strings.Join(test.configString, " "), func() {
-
-				_, err := NewPerASRateLimitFilterFromStrings(test.configString)
-
-				Convey("Should return an error", func() {
-					So(err, ShouldNotBeNil)
-				})
-			})
-		}
-
-		successfulTests := []struct {
-			configString     []string
-			expectedInterval time.Duration
-			expectedMaxCount uint32
-			local            bool
-			outside          bool
-		}{
-			{[]string{nrOfLocalClients_flag, "10"},
-				defaultInterval, defaultMaxCount,
-				true, false},
-			{[]string{nrOfLocalClients_flag, "10", localInterval_flag, "60", localMaxCount_flag, "300"},
-				60 * time.Second, 300,
-				true, false},
-			{[]string{nrOfOutsideASes_flag, "10", outsideInterval_flag, "60", outsideMaxCount_flag, "300"},
-				60 * time.Second, 300,
-				false, true},
-			{[]string{nrOfOutsideASes_flag, "10", outsideMaxCount_flag, "100"},
-				defaultInterval, 100,
-				false, true},
-		}
-
-		for _, test := range successfulTests {
-
-			Convey(strings.Join(test.configString, " "), func() {
-
-				filter, err := NewPerASRateLimitFilterFromStrings(test.configString)
-
-				Convey("Should not return an error", func() {
-					So(err, ShouldBeNil)
-				})
-				Convey(fmt.Sprintf("Should set the interval to %v, the number of cells to 48, "+
-					"the number of hash functions to 3 and the max count to %v",
-					test.expectedInterval, test.expectedMaxCount), func() {
-
-					var info rateLimitFilterInfo
-					if test.local {
-						info = filter.localFilterInfo
-					} else {
-						info = filter.outsideFilterInfo
-					}
-
-					So(info.interval, ShouldEqual, test.expectedInterval)
-					So(info.numCells, ShouldEqual, 48)
-					So(info.numHashFunc, ShouldEqual, 3)
-					So(info.maxValue, ShouldEqual, test.expectedMaxCount)
-				})
-				Convey("Should initialize correct cbf", func() {
-					So(filter.localRateLimiting, ShouldEqual, test.local)
-					So(filter.outsideRateLimiting, ShouldEqual, test.outside)
-					if test.local {
-						So(filter.localFilter, ShouldNotBeNil)
-					} else {
-						So(filter.localFilter, ShouldBeNil)
-					}
-					if test.outside {
-						So(filter.outsideFilter, ShouldNotBeNil)
-					} else {
-						So(filter.outsideFilter, ShouldBeNil)
-					}
-				})
-			})
-		}
-
-		configStringWithBothSettings := []string{nrOfLocalClients_flag, "20", nrOfOutsideASes_flag, "30"}
-
-		Convey(strings.Join(configStringWithBothSettings, " "), func() {
-
-			filter, err := NewPerASRateLimitFilterFromStrings(configStringWithBothSettings)
-
-			Convey("Should not return an error", func() {
-				So(err, ShouldBeNil)
-			})
-			Convey(fmt.Sprintf("Should set the intervals and max counts to the default value, "+
-				"the number of cells for the local filter to 96, for the outside filter to 144"), func() {
-
-				localInfo := filter.localFilterInfo
-				outsideInfo := filter.outsideFilterInfo
-
-				So(localInfo.interval, ShouldEqual, defaultInterval)
-				So(localInfo.numCells, ShouldEqual, 96)
-				So(localInfo.numHashFunc, ShouldEqual, 3)
-				So(localInfo.maxValue, ShouldEqual, defaultMaxCount)
-
-				So(outsideInfo.interval, ShouldEqual, defaultInterval)
-				So(outsideInfo.numCells, ShouldEqual, 144)
-				So(outsideInfo.numHashFunc, ShouldEqual, 3)
-				So(outsideInfo.maxValue, ShouldEqual, defaultMaxCount)
-			})
-			Convey("Should initialize both cbfs", func() {
-				So(filter.localRateLimiting, ShouldBeTrue)
-				So(filter.outsideRateLimiting, ShouldBeTrue)
-				So(filter.localFilter, ShouldNotBeNil)
-				So(filter.outsideFilter, ShouldNotBeNil)
-			})
-		})
 	})
 }
 

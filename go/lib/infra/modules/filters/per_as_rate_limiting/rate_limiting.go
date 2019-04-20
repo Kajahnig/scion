@@ -20,13 +20,11 @@ import (
 	"github.com/scionproto/scion/go/lib/snet"
 )
 
-var SCMPClassType = scmp.ClassType{
-	Class: scmp.C_Filtering,
-	Type:  scmp.T_F_ASOrClientRateLimitReached,
-}
-
 func (f *PerASRateLimitFilter) SCMPError() scmp.ClassType {
-	return SCMPClassType
+	return scmp.ClassType{
+		Class: scmp.C_Filtering,
+		Type:  scmp.T_F_ASOrClientRateLimitReached,
+	}
 }
 
 func (f *PerASRateLimitFilter) FilterPacket(pkt *snet.SCIONPacket) (filters.FilterResult, error) {
