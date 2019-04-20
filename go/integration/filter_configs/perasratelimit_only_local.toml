@@ -1,5 +1,5 @@
 #A per AS rate limit filter for local traffic
 [perASratelimit]
 LocalClients = 1
-LocalInterval = "1m"
+LocalInterval = "1s"
 LocalMaxCount = 300

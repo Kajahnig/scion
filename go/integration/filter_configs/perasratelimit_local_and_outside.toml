@@ -1,8 +1,8 @@
 #A per AS rate limit filter for local and outside traffic
 [perASratelimit]
 LocalClients = 1
-LocalInterval = "1m"
+LocalInterval = "1s"
 LocalMaxCount = 90
 OutsideASes = 8
-OutsideInterval = "1m"
+OutsideInterval = "1s"
 OutsideMaxCount = 50
