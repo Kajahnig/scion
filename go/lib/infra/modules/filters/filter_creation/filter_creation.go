@@ -38,6 +38,43 @@ const (
 	Comment        = "//"
 )
 
+func CreateFiltersFromConfig(cfg PacketFilterConfig) ([]*filters.PacketFilter, error) {
+
+	var results []*filters.PacketFilter
+	var err error
+
+	if cfg.Whitelist != nil {
+		var filter filters.PacketFilter
+		filter, err = whitelisting.NewWhitelistFilterFromConfig(cfg.Whitelist)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, &filter)
+	}
+	if cfg.Pathlength != nil {
+		var filter filters.PacketFilter
+		filter, err = path_length.NewPathLengthFilterFromConfig(cfg.Pathlength)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, &filter)
+	}
+	if cfg.Drkey != nil {
+		var filter filters.PacketFilter
+		filter = &drkey_filter.DRKeyFilter{}
+		results = append(results, &filter)
+	}
+	if cfg.PerASRateLimit != nil {
+		var filter filters.PacketFilter
+		filter, err = per_as_rate_limiting.NewPerASRateLimitingFilterFromConfig(cfg.PerASRateLimit)
+		if err != nil {
+			return nil, err
+		}
+		results = append(results, &filter)
+	}
+	return results, nil
+}
+
 func CreateFiltersFromConfigFile(configDir string, configFileName string) ([]*filters.PacketFilter, error) {
 	configFile, err := os.Open(configDir + "/" + configFileName)
 	if err != nil {

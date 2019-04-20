@@ -22,7 +22,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-func TestPathLengthConfig(t *testing.T) {
+func TestPathLengthConfig_Sample(t *testing.T) {
 	Convey("Sample correct", t, func() {
 		var sample bytes.Buffer
 		var cfg PathLengthConfig
@@ -35,4 +35,29 @@ func TestPathLengthConfig(t *testing.T) {
 		SoMsg("MinPathlength correct", cfg.MinPathLength, ShouldEqual, 1)
 		SoMsg("MaxPathLength correct", cfg.MaxPathLength, ShouldEqual, 2)
 	})
+}
+
+func TestPathLengthConfig_Validate(t *testing.T) {
+	Convey("Validation of a config should fail if", t, func() {
+
+		Convey("Min Path length below 0", func() {
+			err := makeConfig(-1, 4).Validate()
+			So(err, ShouldNotBeNil)
+		})
+		Convey("Max Path length below 0", func() {
+			err := makeConfig(1, -3).Validate()
+			So(err, ShouldNotBeNil)
+		})
+		Convey("Max Path length smaller than min path length", func() {
+			err := makeConfig(5, 4).Validate()
+			So(err, ShouldNotBeNil)
+		})
+	})
+}
+
+func makeConfig(min, max int) *PathLengthConfig {
+	return &PathLengthConfig{
+		MinPathLength: min,
+		MaxPathLength: max,
+	}
 }

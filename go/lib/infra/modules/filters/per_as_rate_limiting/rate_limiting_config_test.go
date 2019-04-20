@@ -23,7 +23,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-func TestPathLengthConfig(t *testing.T) {
+func TestPerASRateLimitConfig_Sample(t *testing.T) {
 	Convey("Sample correct", t, func() {
 		var sample bytes.Buffer
 		var cfg PerASRateLimitConfig
@@ -40,4 +40,65 @@ func TestPathLengthConfig(t *testing.T) {
 		SoMsg("Local Max count correct", cfg.LocalMaxCount, ShouldEqual, 1)
 		SoMsg("Outside Max count correct", cfg.OutsideMaxCount, ShouldEqual, 3)
 	})
+}
+
+func TestPerASRateLimitConfig_Validate(t *testing.T) {
+	Convey("Validation of a config should fail if", t, func() {
+
+		Convey("Number of local clients below 0", func() {
+			err := makeConfig(-1, 4, time.Second, time.Second, 10, 20).Validate()
+			So(err, ShouldNotBeNil)
+		})
+		Convey("Number of outside ASes below 0", func() {
+			err := makeConfig(1, -4, time.Second, time.Second, 10, 20).Validate()
+			So(err, ShouldNotBeNil)
+		})
+		Convey("Local Max count is 0", func() {
+			err := makeConfig(1, 4, time.Second, time.Second, 0, 20).Validate()
+			So(err, ShouldNotBeNil)
+		})
+		Convey("Outside max count is below 0", func() {
+			err := makeConfig(1, 4, time.Second, time.Second, 10, -20).Validate()
+			So(err, ShouldNotBeNil)
+		})
+		Convey("Local Interval is 0", func() {
+			err := makeConfig(1, 4, 0*time.Second, time.Second, 10, 20).Validate()
+			So(err, ShouldNotBeNil)
+		})
+		Convey("Outside Interval is below 0", func() {
+			err := makeConfig(1, 4, time.Second, -1*time.Second, 10, 20).Validate()
+			So(err, ShouldNotBeNil)
+		})
+	})
+}
+
+func TestPerASRateLimitConfig_InitDefaults(t *testing.T) {
+	Convey("Initialising defaults should", t, func() {
+
+		cfg := &PerASRateLimitConfig{
+			LocalClients: 10,
+			OutsideASes:  20,
+		}
+		cfg.InitDefaults()
+
+		Convey("Set the intervals to the default value", func() {
+			So(cfg.LocalInterval.Duration, ShouldEqual, defaultInterval)
+			So(cfg.OutsideInterval.Duration, ShouldEqual, defaultInterval)
+		})
+		Convey("Set the max counts to the default value", func() {
+			So(cfg.LocalMaxCount, ShouldEqual, int(defaultMaxCount))
+			So(cfg.OutsideMaxCount, ShouldEqual, int(defaultMaxCount))
+		})
+	})
+}
+
+func makeConfig(local, outside int, linterval, ointerval time.Duration, lmax, omax int) *PerASRateLimitConfig {
+	return &PerASRateLimitConfig{
+		LocalClients:    local,
+		OutsideASes:     outside,
+		LocalInterval:   duration{linterval},
+		OutsideInterval: duration{ointerval},
+		LocalMaxCount:   lmax,
+		OutsideMaxCount: omax,
+	}
 }

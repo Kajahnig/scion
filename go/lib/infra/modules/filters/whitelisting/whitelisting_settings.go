@@ -51,11 +51,11 @@ func (setting OutsideWLSetting) toString() string {
 const (
 	//Settings for Filtering requests from the local AS
 	// Whitelist all requests form the local AS
-	WLLocalAS LocalWLSetting = iota
+	NoLocalWL LocalWLSetting = iota
 	// Whitelist only local requests from infrastructure nodes
 	WLLocalInfraNodes
 	// Drop All requests from the local AS
-	NoLocalWL
+	WLLocalAS
 )
 
 func (setting LocalWLSetting) toString() string {

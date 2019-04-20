@@ -29,10 +29,10 @@ import (
 var _ config.Config = (*PacketFilterConfig)(nil)
 
 type PacketFilterConfig struct {
+	Whitelist      *whitelisting.WhitelistConfig
 	Pathlength     *path_length.PathLengthConfig
 	Drkey          *drkey_filter.DRKeyConfig
 	PerASRateLimit *per_as_rate_limiting.PerASRateLimitConfig
-	Whitelist      *whitelisting.WhitelistConfig
 }
 
 func (cfg *PacketFilterConfig) InitDefaults() {

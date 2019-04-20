@@ -1,0 +1,19 @@
+[whitelist]
+PathToTopoFile = "../whitelisting/topology.json"
+OutsideWLSetting = "ISD"
+LocalWLSetting = "AS"
+RescanInterval = "24h"
+
+[pathlength]
+MinPathLength = 3
+MaxPathLength = 4
+
+[drkey]
+
+[perASratelimit]
+LocalClients = 10
+OutsideASes = 30
+LocalInterval = "30s"
+OutsideInterval = "40s"
+LocalMaxCount = 100
+OutsideMaxCount = 200

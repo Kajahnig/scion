@@ -36,11 +36,7 @@ type PathLengthConfig struct {
 	MaxPathLength int
 }
 
-func (cfg *PathLengthConfig) InitDefaults() {
-	if cfg.MaxPathLength == 0 {
-		cfg.MaxPathLength = 1
-	}
-}
+func (cfg *PathLengthConfig) InitDefaults() {}
 
 func (cfg *PathLengthConfig) Validate() error {
 	if cfg.MaxPathLength < cfg.MinPathLength {

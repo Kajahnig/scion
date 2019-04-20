@@ -19,6 +19,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/BurntSushi/toml"
 	. "github.com/smartystreets/goconvey/convey"
 
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/drkey_filter"
@@ -188,4 +189,72 @@ func Test_CreateFiltersFromConfigFile(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestCreateFiltersFromConfig(t *testing.T) {
+	Convey("Creating filters from a config file with an error", t, func() {
+
+		var cfg PacketFilterConfig
+		_, err := toml.DecodeFile("./faulty_test_config.toml", &cfg)
+
+		Convey("Should not return an error when decoding the file", func() {
+			So(err, ShouldBeNil)
+		})
+
+		cfg.InitDefaults()
+
+		filterSlice, err := CreateFiltersFromConfig(cfg)
+
+		Convey("Should return an error", func() {
+			So(err, ShouldNotBeNil)
+		})
+
+		Convey("Should return an empty filter slice", func() {
+			So(filterSlice, ShouldBeNil)
+		})
+	})
+
+	Convey("Creating filters from a config file with all filters", t, func() {
+
+		var cfg PacketFilterConfig
+		_, err := toml.DecodeFile("./test_config.toml", &cfg)
+
+		Convey("Should not return an error when decoding the file", func() {
+			So(err, ShouldBeNil)
+		})
+
+		cfg.InitDefaults()
+
+		filterSlice, err := CreateFiltersFromConfig(cfg)
+
+		Convey("Should not return an error", func() {
+			So(err, ShouldBeNil)
+		})
+
+		Convey("Should return a filled filter slice", func() {
+			So(filterSlice, ShouldHaveLength, 4)
+		})
+
+		tests := []struct {
+			typeDescription string
+			filterType      reflect.Type
+		}{
+			{"Whitelist Filter",
+				reflect.TypeOf(&whitelisting.WhitelistFilter{})},
+			{"Path Length Filter",
+				reflect.TypeOf(&path_length.PathLengthFilter{})},
+			{"DRKey Source Auth Filter",
+				reflect.TypeOf(&drkey_filter.DRKeyFilter{})},
+			{"Per AS Rate Limit Filter",
+				reflect.TypeOf(&per_as_rate_limiting.PerASRateLimitFilter{})},
+		}
+
+		for i, test := range tests {
+
+			Convey(fmt.Sprintf("The %v. filter in the slice should be a %v", i+1, test.typeDescription), func() {
+				So(reflect.TypeOf(*filterSlice[i]), ShouldEqual, test.filterType)
+			})
+		}
+	})
+
 }

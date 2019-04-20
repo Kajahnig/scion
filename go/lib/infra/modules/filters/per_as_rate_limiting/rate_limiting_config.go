@@ -55,16 +55,16 @@ type PerASRateLimitConfig struct {
 
 func (cfg *PerASRateLimitConfig) InitDefaults() {
 	if cfg.LocalInterval.Duration == 0 {
-		cfg.LocalInterval = duration{300 * time.Second}
+		cfg.LocalInterval = duration{defaultInterval}
 	}
 	if cfg.OutsideInterval.Duration == 0 {
-		cfg.OutsideInterval = duration{300 * time.Second}
+		cfg.OutsideInterval = duration{defaultInterval}
 	}
 	if cfg.LocalMaxCount == 0 {
-		cfg.LocalMaxCount = 156
+		cfg.LocalMaxCount = int(defaultMaxCount)
 	}
 	if cfg.OutsideMaxCount == 0 {
-		cfg.OutsideMaxCount = 156
+		cfg.OutsideMaxCount = int(defaultMaxCount)
 	}
 }
 
@@ -75,10 +75,10 @@ func (cfg *PerASRateLimitConfig) Validate() error {
 	if cfg.OutsideASes < 0 {
 		return common.NewBasicError("Number of outside ASes is negative", nil)
 	}
-	if cfg.LocalInterval.Duration < 0 {
+	if cfg.LocalInterval.Duration <= 0 {
 		return common.NewBasicError("Local interval is negative", nil)
 	}
-	if cfg.OutsideInterval.Duration < 0 {
+	if cfg.OutsideInterval.Duration <= 0 {
 		return common.NewBasicError("Outside interval is negative", nil)
 	}
 	if cfg.LocalMaxCount <= 0 {
