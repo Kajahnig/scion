@@ -17,6 +17,8 @@ package integration
 import (
 	"flag"
 
+	"github.com/BurntSushi/toml"
+
 	"github.com/scionproto/scion/go/lib/infra/modules/filters"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/filter_creation"
 	"github.com/scionproto/scion/go/lib/log"
@@ -58,7 +60,7 @@ func validateFilterFlags() {
 
 func initNetworkWithFilterDispatcher() {
 	// Initialize custom scion network with filter dispatcher
-	err := snet.InitCustom(Local.IA, Sciond, filters.NewFilteringPacketDispatcher(createFilters()))
+	err := snet.InitCustom(Local.IA, Sciond, filters.NewFilteringPacketDispatcher(createFiltersFromConfig()))
 
 	if err != nil {
 		LogFatal("Unable to initialize custom SCION network with filter dispatcher", "err", err)
@@ -68,6 +70,22 @@ func initNetworkWithFilterDispatcher() {
 
 func createFilters() []*filters.PacketFilter {
 	filters, err := filter_creation.CreateFiltersFromConfigFile(FilterConfigDir, ConfigFileName)
+	if err != nil {
+		LogFatal("Unable to create filters", "err", err)
+	}
+	return filters
+}
+
+func createFiltersFromConfig() []*filters.PacketFilter {
+	var cfg filter_creation.PacketFilterConfig
+	_, err := toml.DecodeFile(FilterConfigDir+"/"+ConfigFileName+".toml", &cfg)
+
+	cfg.InitDefaults()
+	err = cfg.Validate()
+	if err != nil {
+		LogFatal("Validation of Filter configuration failed", "err", err)
+	}
+	filters, err := filter_creation.CreateFiltersFromConfig(cfg)
 	if err != nil {
 		LogFatal("Unable to create filters", "err", err)
 	}

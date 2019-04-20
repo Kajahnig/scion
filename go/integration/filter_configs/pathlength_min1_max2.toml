@@ -1,0 +1,4 @@
+#A path length filter with min path length 1 and max 2
+[pathlength]
+MinPathLength = 1
+MaxPathLength = 2

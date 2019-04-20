@@ -1,0 +1,5 @@
+#A per AS rate limit filter for outside traffic
+[perASratelimit]
+OutsideASes = 16
+OutsideInterval = "1m"
+OutsideMaxCount = 100
