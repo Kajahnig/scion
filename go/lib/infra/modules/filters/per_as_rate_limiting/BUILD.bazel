@@ -3,9 +3,10 @@ load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 go_library(
     name = "go_default_library",
     srcs = [
-        "rate_limiting.go",
-        "rate_limiting_config.go",
-        "rate_limiting_creation.go",
+        "packet_rate_limit_config.go",
+        "packet_rate_limit_filter.go",
+        "rate_limit_config.go",
+        "rate_limit_filter.go",
     ],
     importpath = "github.com/scionproto/scion/go/lib/infra/modules/filters/per_as_rate_limiting",
     visibility = ["//visibility:public"],
@@ -23,9 +24,10 @@ go_library(
 go_test(
     name = "go_default_test",
     srcs = [
-        "rate_limiting_config_test.go",
-        "rate_limiting_creation_test.go",
-        "rate_limiting_test.go",
+        "packet_rate_limit_config_test.go",
+        "packet_rate_limit_filter_test.go",
+        "rate_limit_config_test.go",
+        "rate_limit_filter_test.go",
     ],
     embed = [":go_default_library"],
     deps = [

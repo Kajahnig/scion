@@ -16,7 +16,6 @@ go_library(
         "//go/lib/infra/modules/filters/path_length:go_default_library",
         "//go/lib/infra/modules/filters/per_as_rate_limiting:go_default_library",
         "//go/lib/infra/modules/filters/whitelisting:go_default_library",
-        "//go/lib/log:go_default_library",
     ],
 )
 
