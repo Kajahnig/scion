@@ -43,12 +43,12 @@ func TestPacketFilterConfig(t *testing.T) {
 		SoMsg("MinPathlength correct", cfg.Pathlength.MinPathLength, ShouldEqual, 1)
 		SoMsg("MaxPathLength correct", cfg.Pathlength.MaxPathLength, ShouldEqual, 2)
 		SoMsg("DRkey present", cfg.Drkey, ShouldNotBeNil)
-		SoMsg("Number of local clients correct", cfg.PerASRateLimit.LocalClients, ShouldEqual, 100)
-		SoMsg("Number of outside ASes correct", cfg.PerASRateLimit.OutsideASes, ShouldEqual, 5)
-		SoMsg("Local interval correct", cfg.PerASRateLimit.LocalInterval.Duration, ShouldEqual, 20*time.Second)
-		SoMsg("Outside interval correct", cfg.PerASRateLimit.OutsideInterval.Duration, ShouldEqual, 50*time.Second)
-		SoMsg("Local Max count correct", cfg.PerASRateLimit.LocalMaxCount, ShouldEqual, 1)
-		SoMsg("Outside Max count correct", cfg.PerASRateLimit.OutsideMaxCount, ShouldEqual, 3)
+		SoMsg("Number of local clients correct", cfg.PacketRateLimit.LocalConfig.NumOfClients, ShouldEqual, 100)
+		SoMsg("Number of outside ASes correct", cfg.PacketRateLimit.OutsideConfig.NumOfClients, ShouldEqual, 100)
+		SoMsg("Local interval correct", cfg.PacketRateLimit.LocalConfig.Interval.Duration, ShouldEqual, 20*time.Second)
+		SoMsg("Outside interval correct", cfg.PacketRateLimit.OutsideConfig.Interval.Duration, ShouldEqual, 20*time.Second)
+		SoMsg("Local Max count correct", cfg.PacketRateLimit.LocalConfig.MaxCount, ShouldEqual, 5)
+		SoMsg("Outside Max count correct", cfg.PacketRateLimit.LocalConfig.MaxCount, ShouldEqual, 5)
 		SoMsg("Path to topology file correct", cfg.Whitelist.PathToTopoFile, ShouldEqual, "../whitelisting/topology.json")
 		SoMsg("Rescanning interval correct", cfg.Whitelist.RescanInterval.Duration, ShouldEqual, 40*time.Minute)
 		SoMsg("Outside WL setting correct", cfg.Whitelist.OutsideWLSetting.OutsideWLSetting, ShouldEqual, whitelisting.WLISD)
@@ -68,7 +68,7 @@ func TestPacketFilterConfig(t *testing.T) {
 
 		SoMsg("Path Length Filter present", cfg.Pathlength, ShouldNotBeNil)
 		SoMsg("No DRKey filter config", cfg.Drkey, ShouldBeNil)
-		SoMsg("No per AS rate limit filter config", cfg.PerASRateLimit, ShouldBeNil)
+		SoMsg("No per AS rate limit filter config", cfg.PacketRateLimit, ShouldBeNil)
 		SoMsg("No whitelist filter config", cfg.Whitelist, ShouldBeNil)
 	})
 
@@ -84,14 +84,14 @@ func TestPacketFilterConfig(t *testing.T) {
 
 		SoMsg("No Path Length Filter config", cfg.Pathlength, ShouldBeNil)
 		SoMsg("DRkey filter config present", cfg.Drkey, ShouldNotBeNil)
-		SoMsg("No per as rate limit Filter config", cfg.PerASRateLimit, ShouldBeNil)
+		SoMsg("No per as rate limit Filter config", cfg.PacketRateLimit, ShouldBeNil)
 		SoMsg("No whitelist filter config", cfg.Whitelist, ShouldBeNil)
 	})
 
 	Convey("Sample with only per AS rate limiting filter correct", t, func() {
 		var sample bytes.Buffer
 		var cfg PacketFilterConfig
-		config.WriteSample(&sample, nil, nil, &(per_as_rate_limiting.PerASRateLimitConfig{}))
+		config.WriteSample(&sample, nil, nil, &(per_as_rate_limiting.PacketRateLimitConfig{}))
 		meta, err := toml.Decode(sample.String(), &cfg)
 		SoMsg("err", err, ShouldBeNil)
 		validationErr := cfg.Validate()
@@ -100,7 +100,7 @@ func TestPacketFilterConfig(t *testing.T) {
 
 		SoMsg("No Path Length Filter config", cfg.Pathlength, ShouldBeNil)
 		SoMsg("No DRkey filter config", cfg.Drkey, ShouldBeNil)
-		SoMsg("Per AS filter config present", cfg.PerASRateLimit, ShouldNotBeNil)
+		SoMsg("Per AS filter config present", cfg.PacketRateLimit, ShouldNotBeNil)
 		SoMsg("No whitelist filter config", cfg.Whitelist, ShouldBeNil)
 	})
 
@@ -116,7 +116,7 @@ func TestPacketFilterConfig(t *testing.T) {
 
 		SoMsg("No Path Length Filter config", cfg.Pathlength, ShouldBeNil)
 		SoMsg("No DRkey filter config", cfg.Drkey, ShouldBeNil)
-		SoMsg("No Per AS filter config", cfg.PerASRateLimit, ShouldBeNil)
+		SoMsg("No Per AS filter config", cfg.PacketRateLimit, ShouldBeNil)
 		SoMsg("Whitelist filter config present", cfg.Whitelist, ShouldNotBeNil)
 	})
 }

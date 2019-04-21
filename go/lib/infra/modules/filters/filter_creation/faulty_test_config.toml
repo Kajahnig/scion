@@ -1,4 +1,4 @@
 [whitelist]
 [pathlength]
-[perASratelimit]
+[packetRateLimit]
 [drkey]

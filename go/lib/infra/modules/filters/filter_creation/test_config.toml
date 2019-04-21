@@ -10,10 +10,13 @@ MaxPathLength = 4
 
 [drkey]
 
-[perASratelimit]
-LocalClients = 10
-OutsideASes = 30
-LocalInterval = "30s"
-OutsideInterval = "40s"
-LocalMaxCount = 100
-OutsideMaxCount = 200
+[packetRateLimit]
+    [packetRateLimit.LocalConfig]
+    NumOfClients = 10
+    Interval = "30s"
+    MaxCount = 100
+
+    [packetRateLimit.OutsideConfig]
+    NumOfClients = 30
+    MaxCount = 200
+    Interval = "40s"

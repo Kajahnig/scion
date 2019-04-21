@@ -29,10 +29,10 @@ import (
 var _ config.Config = (*PacketFilterConfig)(nil)
 
 type PacketFilterConfig struct {
-	Whitelist      *whitelisting.WhitelistConfig
-	Pathlength     *path_length.PathLengthConfig
-	Drkey          *drkey_filter.DRKeyConfig
-	PerASRateLimit *per_as_rate_limiting.PerASRateLimitConfig
+	Whitelist       *whitelisting.WhitelistConfig
+	Pathlength      *path_length.PathLengthConfig
+	Drkey           *drkey_filter.DRKeyConfig
+	PacketRateLimit *per_as_rate_limiting.PacketRateLimitConfig
 }
 
 func (cfg *PacketFilterConfig) InitDefaults() {
@@ -42,8 +42,8 @@ func (cfg *PacketFilterConfig) InitDefaults() {
 	if cfg.Drkey != nil {
 		cfg.Drkey.InitDefaults()
 	}
-	if cfg.PerASRateLimit != nil {
-		cfg.PerASRateLimit.InitDefaults()
+	if cfg.PacketRateLimit != nil {
+		cfg.PacketRateLimit.InitDefaults()
 	}
 	if cfg.Whitelist != nil {
 		cfg.Whitelist.InitDefaults()
@@ -65,11 +65,11 @@ func (cfg *PacketFilterConfig) Validate() error {
 				"type", fmt.Sprintf("%T", cfg.Drkey))
 		}
 	}
-	if cfg.PerASRateLimit != nil {
-		err := cfg.PerASRateLimit.Validate()
+	if cfg.PacketRateLimit != nil {
+		err := cfg.PacketRateLimit.Validate()
 		if err != nil {
 			return common.NewBasicError("Unable to validate", err,
-				"type", fmt.Sprintf("%T", cfg.PerASRateLimit))
+				"type", fmt.Sprintf("%T", cfg.PacketRateLimit))
 		}
 	}
 	if cfg.Whitelist != nil {
@@ -90,6 +90,6 @@ func (cfg *PacketFilterConfig) Sample(dst io.Writer, path config.Path, ctx confi
 	config.WriteSample(dst, path, ctx,
 		&(path_length.PathLengthConfig{}),
 		&(drkey_filter.DRKeyConfig{}),
-		&(per_as_rate_limiting.PerASRateLimitConfig{}),
+		&(per_as_rate_limiting.PacketRateLimitConfig{}),
 		&(whitelisting.WhitelistConfig{}))
 }

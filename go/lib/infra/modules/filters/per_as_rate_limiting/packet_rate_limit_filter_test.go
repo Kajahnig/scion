@@ -16,7 +16,6 @@ package per_as_rate_limiting
 
 import (
 	"testing"
-	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
 
@@ -38,11 +37,124 @@ var (
 	path = &spath.Path{Raw: []byte("something")}
 )
 
+func TestNewPacketRateLimitingFilterFromConfig(t *testing.T) {
+
+	rateLimitConfig := &RateLimitConfig{
+		NumOfClients: 10,
+		MaxCount:     20,
+	}
+
+	Convey("Creating a new packet rate limit filter with a local config", t, func() {
+
+		cfg := &PacketRateLimitConfig{
+			LocalConfig:   rateLimitConfig,
+			OutsideConfig: nil,
+		}
+		cfg.InitDefaults()
+
+		filter, err := NewPacketRateLimitingFilterFromConfig(cfg)
+
+		Convey("Should not return an error", func() {
+			So(err, ShouldBeNil)
+		})
+		Convey("Should initialise the local rate limit filter with the correct values", func() {
+			So(filter.localRateLimitFilter.numCells, ShouldEqual, 48)
+			So(filter.localRateLimitFilter.numHashFunc, ShouldEqual, 3)
+			So(filter.localRateLimitFilter.maxValue, ShouldEqual, 20)
+		})
+		Convey("Should set the outside filter to nil", func() {
+			So(filter.outsideRateLimitFilter, ShouldBeNil)
+		})
+	})
+
+	Convey("Creating a new packet rate limit filter with an outside config", t, func() {
+
+		cfg := &PacketRateLimitConfig{
+			LocalConfig:   nil,
+			OutsideConfig: rateLimitConfig,
+		}
+		cfg.InitDefaults()
+
+		filter, err := NewPacketRateLimitingFilterFromConfig(cfg)
+
+		Convey("Should not return an error", func() {
+			So(err, ShouldBeNil)
+		})
+		Convey("Should initialise the outside rate limit filter with the correct values", func() {
+			So(filter.outsideRateLimitFilter.numCells, ShouldEqual, 48)
+			So(filter.outsideRateLimitFilter.numHashFunc, ShouldEqual, 3)
+			So(filter.outsideRateLimitFilter.maxValue, ShouldEqual, 20)
+		})
+		Convey("Should set the local filter to nil", func() {
+			So(filter.localRateLimitFilter, ShouldBeNil)
+		})
+	})
+
+	Convey("Creating a new packet rate limit filter with local and outside configs", t, func() {
+
+		cfg := &PacketRateLimitConfig{
+			LocalConfig:   rateLimitConfig,
+			OutsideConfig: rateLimitConfig,
+		}
+		cfg.InitDefaults()
+
+		filter, err := NewPacketRateLimitingFilterFromConfig(cfg)
+
+		Convey("Should not return an error", func() {
+			So(err, ShouldBeNil)
+		})
+		Convey("Should set neither of the filters to nil", func() {
+			So(filter.localRateLimitFilter, ShouldNotBeNil)
+			So(filter.outsideRateLimitFilter, ShouldNotBeNil)
+		})
+	})
+
+	Convey("Creating a new packet rate limit filter with neither local nor outside configs", t, func() {
+
+		cfg := &PacketRateLimitConfig{
+			LocalConfig:   nil,
+			OutsideConfig: nil,
+		}
+		cfg.InitDefaults()
+
+		_, err := NewPacketRateLimitingFilterFromConfig(cfg)
+
+		Convey("Should return an error", func() {
+			So(err, ShouldNotBeNil)
+		})
+	})
+
+	Convey("Creating a new packet rate limit filter a faulty config", t, func() {
+
+		cfg := &PacketRateLimitConfig{
+			LocalConfig: &RateLimitConfig{
+				NumOfClients: -10,
+			},
+			OutsideConfig: nil,
+		}
+		cfg.InitDefaults()
+
+		_, err := NewPacketRateLimitingFilterFromConfig(cfg)
+
+		Convey("Should return an error", func() {
+			So(err, ShouldNotBeNil)
+		})
+	})
+}
+
 func TestPerASRateLimitFilter_FilterPacket(t *testing.T) {
 
-	localConfigAS2maxCount3 := &PerASRateLimitConfig{LocalClients: 2, LocalMaxCount: 3}
-	outsideConfigAS2maxCount3 := &PerASRateLimitConfig{OutsideASes: 2, OutsideMaxCount: 3}
-	bothConfigAS1localCount1OutsideCount2 := &PerASRateLimitConfig{LocalClients: 1, LocalMaxCount: 1, OutsideASes: 1, OutsideMaxCount: 2}
+	rateLimitConfig := &RateLimitConfig{NumOfClients: 2, MaxCount: 3}
+
+	localConfigAS2maxCount3 := &PacketRateLimitConfig{LocalConfig: rateLimitConfig}
+	outsideConfigAS2maxCount3 := &PacketRateLimitConfig{OutsideConfig: rateLimitConfig}
+
+	localConfig := &RateLimitConfig{NumOfClients: 1, MaxCount: 1}
+	localConfig.InitDefaults()
+	outsideConfig := &RateLimitConfig{NumOfClients: 1, MaxCount: 2}
+	outsideConfig.InitDefaults()
+
+	bothConfigAS1localCount1OutsideCount2 := &PacketRateLimitConfig{localConfig, outsideConfig}
 
 	localConfigAS2maxCount3.InitDefaults()
 	outsideConfigAS2maxCount3.InitDefaults()
@@ -54,7 +166,7 @@ func TestPerASRateLimitFilter_FilterPacket(t *testing.T) {
 
 			var result filters.FilterResult
 
-			localFilter, err := NewPerASRateLimitingFilterFromConfig(localConfigAS2maxCount3)
+			localFilter, err := NewPacketRateLimitingFilterFromConfig(localConfigAS2maxCount3)
 
 			So(err, ShouldBeNil)
 
@@ -94,7 +206,7 @@ func TestPerASRateLimitFilter_FilterPacket(t *testing.T) {
 
 			var result filters.FilterResult
 
-			outsideFilter, err := NewPerASRateLimitingFilterFromConfig(outsideConfigAS2maxCount3)
+			outsideFilter, err := NewPacketRateLimitingFilterFromConfig(outsideConfigAS2maxCount3)
 
 			So(err, ShouldBeNil)
 
@@ -130,7 +242,7 @@ func TestPerASRateLimitFilter_FilterPacket(t *testing.T) {
 
 			var resultO1, resultO2, resultL1, resultL2 filters.FilterResult
 
-			filter, err := NewPerASRateLimitingFilterFromConfig(bothConfigAS1localCount1OutsideCount2)
+			filter, err := NewPacketRateLimitingFilterFromConfig(bothConfigAS1localCount1OutsideCount2)
 
 			So(err, ShouldBeNil)
 
@@ -157,125 +269,6 @@ func TestPerASRateLimitFilter_FilterPacket(t *testing.T) {
 			})
 		})
 
-	})
-}
-
-func TestPerASRateLimitFilter_FilterPacketWithResetIntevals(t *testing.T) {
-
-	Convey("Filtering packets with local per AS rate limit filtering and 10 millisecond reset intervals", t, func() {
-
-		localRateLimitInfo, err1 := newRateLimitFilterInfo(10*time.Millisecond, float64(1), uint32(2))
-		filter, err2 := newPerASRateLimitFilter(
-			true, false,
-			localRateLimitInfo, &rateLimitFilterInfo{})
-		So(err1, ShouldBeNil)
-		So(err2, ShouldBeNil)
-
-		localPacket := packetFrom(IA1_IP1, nil)
-
-		result1, _ := filter.FilterPacket(localPacket)
-		result2, _ := filter.FilterPacket(localPacket)
-		result3, _ := filter.FilterPacket(localPacket)
-
-		Convey("Should accept a local packet from IP1 twice, but not a 3rd time", func() {
-			So(result1, ShouldEqual, filters.FilterAccept)
-			So(result2, ShouldEqual, filters.FilterAccept)
-			So(result3, ShouldEqual, filters.FilterDrop)
-		})
-
-		for result3 == filters.FilterDrop {
-			result1 = result2
-			result2 = result3
-			result3, _ = filter.FilterPacket(localPacket)
-		}
-
-		Convey("After the filter has been reset, the local packets should be accepted again", func() {
-			So(result1, ShouldEqual, filters.FilterDrop)
-			So(result2, ShouldEqual, filters.FilterDrop)
-			So(result3, ShouldEqual, filters.FilterAccept)
-		})
-
-		for i := 0; i < 2; i++ {
-			result1 = result2
-			result2 = result3
-			result3, _ = filter.FilterPacket(localPacket)
-		}
-
-		Convey("And after sending another packet, the following packets should be dropped again", func() {
-			So(result1, ShouldEqual, filters.FilterAccept)
-			So(result2, ShouldEqual, filters.FilterAccept)
-			So(result3, ShouldEqual, filters.FilterDrop)
-		})
-
-		for result3 == filters.FilterDrop {
-			result1 = result2
-			result2 = result3
-			result3, _ = filter.FilterPacket(localPacket)
-		}
-
-		Convey("And after the filter is reset again the packets should be accepted again", func() {
-			So(result1, ShouldEqual, filters.FilterDrop)
-			So(result2, ShouldEqual, filters.FilterDrop)
-			So(result3, ShouldEqual, filters.FilterAccept)
-		})
-	})
-
-	Convey("Filtering packets with outside per AS rate limit filtering and 10 millisecond reset intervals", t, func() {
-
-		outsideRateLimitInfo, err1 := newRateLimitFilterInfo(10*time.Millisecond, float64(1), uint32(2))
-		filter, err2 := newPerASRateLimitFilter(
-			false, true,
-			&rateLimitFilterInfo{}, outsideRateLimitInfo)
-		So(err1, ShouldBeNil)
-		So(err2, ShouldBeNil)
-
-		outsidePacket := packetFrom(IA1_IP1, path)
-
-		result1, _ := filter.FilterPacket(outsidePacket)
-		result2, _ := filter.FilterPacket(outsidePacket)
-		result3, _ := filter.FilterPacket(outsidePacket)
-
-		Convey("Should accept an outside packet from IP1 twice, but not a 3rd time", func() {
-			So(result1, ShouldEqual, filters.FilterAccept)
-			So(result2, ShouldEqual, filters.FilterAccept)
-			So(result3, ShouldEqual, filters.FilterDrop)
-		})
-
-		for result3 == filters.FilterDrop {
-			result1 = result2
-			result2 = result3
-			result3, _ = filter.FilterPacket(outsidePacket)
-		}
-
-		Convey("After the filter has been reset, the outside packets should be accepted again", func() {
-			So(result1, ShouldEqual, filters.FilterDrop)
-			So(result2, ShouldEqual, filters.FilterDrop)
-			So(result3, ShouldEqual, filters.FilterAccept)
-		})
-
-		for i := 0; i < 2; i++ {
-			result1 = result2
-			result2 = result3
-			result3, _ = filter.FilterPacket(outsidePacket)
-		}
-
-		Convey("And after sending another packet, the following packets should be dropped again", func() {
-			So(result1, ShouldEqual, filters.FilterAccept)
-			So(result2, ShouldEqual, filters.FilterAccept)
-			So(result3, ShouldEqual, filters.FilterDrop)
-		})
-
-		for result3 == filters.FilterDrop {
-			result1 = result2
-			result2 = result3
-			result3, _ = filter.FilterPacket(outsidePacket)
-		}
-
-		Convey("And after the filter is reset again the packets should be accepted again", func() {
-			So(result1, ShouldEqual, filters.FilterDrop)
-			So(result2, ShouldEqual, filters.FilterDrop)
-			So(result3, ShouldEqual, filters.FilterAccept)
-		})
 	})
 }
 

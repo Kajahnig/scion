@@ -48,9 +48,9 @@ func CreateFiltersFromConfig(cfg PacketFilterConfig) ([]*filters.PacketFilter, e
 		filter = &drkey_filter.DRKeyFilter{}
 		results = append(results, &filter)
 	}
-	if cfg.PerASRateLimit != nil {
+	if cfg.PacketRateLimit != nil {
 		var filter filters.PacketFilter
-		filter, err = per_as_rate_limiting.NewPerASRateLimitingFilterFromConfig(cfg.PerASRateLimit)
+		filter, err = per_as_rate_limiting.NewPacketRateLimitingFilterFromConfig(cfg.PacketRateLimit)
 		if err != nil {
 			return nil, err
 		}

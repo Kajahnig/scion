@@ -83,7 +83,7 @@ func TestCreateFiltersFromConfig(t *testing.T) {
 			{"DRKey Source Auth Filter",
 				reflect.TypeOf(&drkey_filter.DRKeyFilter{})},
 			{"Per AS Rate Limit Filter",
-				reflect.TypeOf(&per_as_rate_limiting.PerASRateLimitFilter{})},
+				reflect.TypeOf(&per_as_rate_limiting.PacketRateLimitFilter{})},
 		}
 
 		for i, test := range tests {
