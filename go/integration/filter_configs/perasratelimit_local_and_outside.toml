@@ -1,8 +1,11 @@
 #A per AS rate limit filter for local and outside traffic
-[perASratelimit]
-LocalClients = 1
-LocalInterval = "1s"
-LocalMaxCount = 90
-OutsideASes = 8
-OutsideInterval = "1s"
-OutsideMaxCount = 50
+[packetRateLimit]
+    [packetRateLimit.LocalConfig]
+    NumOfClients = 1
+    Interval = "1s"
+    MaxCount = 9
+
+    [packetRateLimit.OutsideConfig]
+    NumOfClients = 8
+    Interval = "1s"
+    MaxCount = 50

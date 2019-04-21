@@ -1,5 +1,6 @@
 #A per AS rate limit filter for local traffic
-[perASratelimit]
-LocalClients = 1
-LocalInterval = "1s"
-LocalMaxCount = 300
+[packetRateLimit]
+    [packetRateLimit.LocalConfig]
+    NumOfClients = 1
+    Interval = "1s"
+    MaxCount = 300
