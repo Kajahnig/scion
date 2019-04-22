@@ -15,9 +15,12 @@
 package whitelist_filters
 
 import (
+	"context"
 	"sync"
+	"time"
 
 	"github.com/scionproto/scion/go/lib/infra/modules/filters"
+	"github.com/scionproto/scion/go/lib/periodic"
 	"github.com/scionproto/scion/go/lib/snet"
 )
 
@@ -28,7 +31,20 @@ type InfraNodesFilter struct {
 	Lock       sync.RWMutex
 }
 
-func (f *InfraNodesFilter) FilterPacket(addr *snet.SCIONAddress) (filters.FilterResult, error) {
+func NewInfraNodesFilter(pathToTopoFile string, rescanInterval time.Duration) *InfraNodesFilter {
+	filter := &InfraNodesFilter{}
+	scanner := &InfraNodesScanner{filter, pathToTopoFile}
+	scanner.Run(context.Background())
+
+	periodic.StartPeriodicTask(
+		scanner,
+		periodic.NewTicker(rescanInterval),
+		rescanInterval)
+
+	return filter
+}
+
+func (f *InfraNodesFilter) FilterAddress(addr snet.SCIONAddress) (filters.FilterResult, error) {
 	f.Lock.RLock()
 	defer f.Lock.RUnlock()
 

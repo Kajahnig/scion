@@ -16,6 +16,7 @@ package whitelist_filters
 
 import (
 	"testing"
+	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
 
@@ -33,19 +34,67 @@ var (
 	externalISDAddr    = snet.SCIONAddress{IA: IAOfExternalISD, Host: otherHostAddr}
 )
 
+func TestNewNeighbourFilter(t *testing.T) {
+	Convey("Creating a new neighbour filter", t, func() {
+		filter := NewNeighbourFilter(pathToFile, time.Hour)
+		filter1 := NewNeighbourFilter(pathToFile1, time.Hour)
+
+		Convey("Should fill the neighbour list of the filter with all neighbours", func() {
+			So(filter.Neighbours, ShouldResemble, scannedNeighbours)
+			So(filter1.Neighbours, ShouldResemble, scannedNeighbours1)
+		})
+	})
+}
+
+func TestNewUpNeighbourFilter(t *testing.T) {
+	Convey("Creating a new upstream neighbour filter", t, func() {
+		filter := NewUpNeighbourFilter(pathToFile, time.Hour)
+		filter1 := NewUpNeighbourFilter(pathToFile1, time.Hour)
+
+		Convey("Should fill the neighbour list of the filter with upstream neighbours", func() {
+			So(filter.Neighbours, ShouldResemble, scannedUpNeighbours)
+			So(filter1.Neighbours, ShouldResemble, scannedUpNeighbours1)
+		})
+	})
+}
+
+func TestNewDownNeighbourFilter(t *testing.T) {
+	Convey("Creating a new downstream neighbour filter", t, func() {
+		filter := NewDownNeighbourFilter(pathToFile, time.Hour)
+		filter1 := NewDownNeighbourFilter(pathToFile1, time.Hour)
+
+		Convey("Should fill the neighbour list of the filter with downstream neighbours", func() {
+			So(filter.Neighbours, ShouldResemble, scannedDownNeighbours)
+			So(filter1.Neighbours, ShouldResemble, scannedDownNeighbours1)
+		})
+	})
+}
+
+func TestNewCoreNeighbourFilter(t *testing.T) {
+	Convey("Creating a new core neighbour filter", t, func() {
+		filter := NewCoreNeighbourFilter(pathToFile, time.Hour)
+		filter1 := NewCoreNeighbourFilter(pathToFile1, time.Hour)
+
+		Convey("Should fill the neighbour list of the filter with core neighbours", func() {
+			So(filter.Neighbours, ShouldResemble, scannedCoreNeighbours)
+			So(filter1.Neighbours, ShouldResemble, scannedCoreNeighbours1)
+		})
+	})
+}
+
 func TestISDFilter_FilterPacket(t *testing.T) {
 	isd1, _ := addr.ISDFromString("1")
 	filter := &ISDFilter{isd1}
 
 	Convey("An ISD Filter", t, func() {
 
-		result, err := filter.FilterPacket(&localISDAddr)
+		result, err := filter.FilterAddress(localISDAddr)
 		Convey("Should accept an address from the local ISD", func() {
 			So(err, ShouldBeNil)
 			So(result, ShouldEqual, filters.FilterAccept)
 		})
 
-		result, err = filter.FilterPacket(&externalISDAddr)
+		result, err = filter.FilterAddress(externalISDAddr)
 		Convey("Should drop an address from any other ISD", func() {
 			So(err, ShouldBeNil)
 			So(result, ShouldEqual, filters.FilterDrop)
@@ -60,13 +109,13 @@ func TestNeighbourFilter_FilterPacket(t *testing.T) {
 
 	Convey("A Neighbour Filter", t, func() {
 
-		result, err := filter.FilterPacket(&externalISDAddr)
+		result, err := filter.FilterAddress(externalISDAddr)
 		Convey("Should accept an address that is on the neighbour whitelist", func() {
 			So(err, ShouldBeNil)
 			So(result, ShouldEqual, filters.FilterAccept)
 		})
 
-		result, err = filter.FilterPacket(&localISDAddr)
+		result, err = filter.FilterAddress(localISDAddr)
 		Convey("Should drop an address that is not on the neighbour whitelist", func() {
 			So(err, ShouldBeNil)
 			So(result, ShouldEqual, filters.FilterDrop)

@@ -1,0 +1,39 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "local_filters.go",
+        "outside_filters.go",
+        "rescanning_infra.go",
+        "rescanning_neighbours.go",
+        "shared.go",
+    ],
+    importpath = "github.com/scionproto/scion/go/lib/infra/modules/filters/whitelisting/whitelist_filters",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//go/lib/addr:go_default_library",
+        "//go/lib/infra/modules/filters:go_default_library",
+        "//go/lib/log:go_default_library",
+        "//go/lib/periodic:go_default_library",
+        "//go/lib/snet:go_default_library",
+        "//go/lib/topology:go_default_library",
+        "//go/proto:go_default_library",
+    ],
+)
+
+go_test(
+    name = "go_default_test",
+    srcs = [
+        "local_filters_test.go",
+        "outside_filters_test.go",
+        "rescanning_test.go",
+    ],
+    embed = [":go_default_library"],
+    deps = [
+        "//go/lib/addr:go_default_library",
+        "//go/lib/infra/modules/filters:go_default_library",
+        "//go/lib/snet:go_default_library",
+        "@com_github_smartystreets_goconvey//convey:go_default_library",
+    ],
+)

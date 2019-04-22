@@ -15,21 +15,24 @@
 package whitelist_filters
 
 import (
+	"context"
 	"sync"
+	"time"
 
 	"github.com/scionproto/scion/go/lib/addr"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters"
+	"github.com/scionproto/scion/go/lib/periodic"
 	"github.com/scionproto/scion/go/lib/snet"
 )
 
 var _ WLFilter = (*ISDFilter)(nil)
 
 type ISDFilter struct {
-	isd addr.ISD
+	Isd addr.ISD
 }
 
-func (f *ISDFilter) FilterPacket(addr *snet.SCIONAddress) (filters.FilterResult, error) {
-	if addr.IA.I == f.isd {
+func (f *ISDFilter) FilterAddress(addr snet.SCIONAddress) (filters.FilterResult, error) {
+	if addr.IA.I == f.Isd {
 		return filters.FilterAccept, nil
 	}
 	return filters.FilterDrop, nil
@@ -42,7 +45,59 @@ type NeighbourFilter struct {
 	Lock       sync.RWMutex
 }
 
-func (f *NeighbourFilter) FilterPacket(addr *snet.SCIONAddress) (filters.FilterResult, error) {
+func NewNeighbourFilter(pathToTopoFile string, rescanInterval time.Duration) *NeighbourFilter {
+	filter := &NeighbourFilter{}
+	scanner := &NeighbourScanner{filter, pathToTopoFile}
+	scanner.Run(context.Background())
+
+	periodic.StartPeriodicTask(
+		scanner,
+		periodic.NewTicker(rescanInterval),
+		rescanInterval)
+
+	return filter
+}
+
+func NewUpNeighbourFilter(pathToTopoFile string, rescanInterval time.Duration) *NeighbourFilter {
+	filter := &NeighbourFilter{}
+	scanner := &UpNeighbourScanner{filter, pathToTopoFile}
+	scanner.Run(context.Background())
+
+	periodic.StartPeriodicTask(
+		scanner,
+		periodic.NewTicker(rescanInterval),
+		rescanInterval)
+
+	return filter
+}
+
+func NewDownNeighbourFilter(pathToTopoFile string, rescanInterval time.Duration) *NeighbourFilter {
+	filter := &NeighbourFilter{}
+	scanner := &DownNeighbourScanner{filter, pathToTopoFile}
+	scanner.Run(context.Background())
+
+	periodic.StartPeriodicTask(
+		scanner,
+		periodic.NewTicker(rescanInterval),
+		rescanInterval)
+
+	return filter
+}
+
+func NewCoreNeighbourFilter(pathToTopoFile string, rescanInterval time.Duration) *NeighbourFilter {
+	filter := &NeighbourFilter{}
+	scanner := &CoreNeighbourScanner{filter, pathToTopoFile}
+	scanner.Run(context.Background())
+
+	periodic.StartPeriodicTask(
+		scanner,
+		periodic.NewTicker(rescanInterval),
+		rescanInterval)
+
+	return filter
+}
+
+func (f *NeighbourFilter) FilterAddress(addr snet.SCIONAddress) (filters.FilterResult, error) {
 	f.Lock.RLock()
 	defer f.Lock.RUnlock()
 

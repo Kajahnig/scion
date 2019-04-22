@@ -20,14 +20,14 @@ import (
 )
 
 type WLFilter interface {
-	FilterPacket(addr *snet.SCIONAddress) (filters.FilterResult, error)
+	FilterAddress(addr snet.SCIONAddress) (filters.FilterResult, error)
 }
 
 var _ WLFilter = (*AcceptingFilter)(nil)
 
 type AcceptingFilter struct{}
 
-func (f *AcceptingFilter) FilterPacket(addr *snet.SCIONAddress) (filters.FilterResult, error) {
+func (f *AcceptingFilter) FilterAddress(addr snet.SCIONAddress) (filters.FilterResult, error) {
 	return filters.FilterAccept, nil
 }
 
@@ -35,6 +35,6 @@ var _ WLFilter = (*DroppingFilter)(nil)
 
 type DroppingFilter struct{}
 
-func (f *DroppingFilter) FilterPacket(addr *snet.SCIONAddress) (filters.FilterResult, error) {
+func (f *DroppingFilter) FilterAddress(addr snet.SCIONAddress) (filters.FilterResult, error) {
 	return filters.FilterDrop, nil
 }

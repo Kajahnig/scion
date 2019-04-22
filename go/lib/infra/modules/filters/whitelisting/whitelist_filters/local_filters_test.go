@@ -16,11 +16,24 @@ package whitelist_filters
 
 import (
 	"testing"
+	"time"
 
 	. "github.com/smartystreets/goconvey/convey"
 
 	"github.com/scionproto/scion/go/lib/infra/modules/filters"
 )
+
+func TestNewInfraNodesFilter(t *testing.T) {
+	Convey("Creating a new infra nodes filter", t, func() {
+		filter := NewInfraNodesFilter(pathToFile, time.Hour)
+		filter1 := NewInfraNodesFilter(pathToFile1, time.Hour)
+
+		Convey("Should fill the infra nodes list of the filter", func() {
+			So(filter.InfraNodes, ShouldResemble, scannedInfraNodes)
+			So(filter1.InfraNodes, ShouldResemble, scannedInfraNodes1)
+		})
+	})
+}
 
 func TestInfraNodesFilter_FilterPacket(t *testing.T) {
 	filter := &InfraNodesFilter{
@@ -29,13 +42,13 @@ func TestInfraNodesFilter_FilterPacket(t *testing.T) {
 
 	Convey("An infra nodes filter", t, func() {
 
-		result, err := filter.FilterPacket(&externalISDAddr)
+		result, err := filter.FilterAddress(externalISDAddr)
 		Convey("Should accept an (IP) address that is on the infra node whitelist", func() {
 			So(err, ShouldBeNil)
 			So(result, ShouldEqual, filters.FilterAccept)
 		})
 
-		result, err = filter.FilterPacket(&localISDAddr)
+		result, err = filter.FilterAddress(localISDAddr)
 		Convey("Should drop an (IP) address that is not on the infra node whitelist", func() {
 			So(err, ShouldBeNil)
 			So(result, ShouldEqual, filters.FilterDrop)
