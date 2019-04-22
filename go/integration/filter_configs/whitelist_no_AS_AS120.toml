@@ -3,4 +3,4 @@
 #And local filtering set to let all packets from the local AS pass
 [whitelist]
 PathToTopoFile = "./gen/ISD1/ASff00_0_120/br1-ff00_0_120-1/topology.json"
-LocalWLSetting = "AS"
+LocalSetting = "Accept"

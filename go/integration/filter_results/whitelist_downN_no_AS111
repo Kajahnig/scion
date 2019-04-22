@@ -3,9 +3,9 @@
 1-ff00:0:110    1-ff00:0:111    whitelist
 1-ff00:0:111    1-ff00:0:111    whitelist
 1-ff00:0:112    1-ff00:0:111    no
-1-ff00:0:120    1-ff00:0:111    no
+1-ff00:0:120    1-ff00:0:111    whitelist
 1-ff00:0:121    1-ff00:0:111    whitelist
-1-ff00:0:130    1-ff00:0:111    no
+1-ff00:0:130    1-ff00:0:111    whitelist
 1-ff00:0:132    1-ff00:0:111    whitelist
 2-ff00:0:211    1-ff00:0:111    whitelist
 2-ff00:0:220    1-ff00:0:111    whitelist

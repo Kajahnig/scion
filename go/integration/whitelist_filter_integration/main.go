@@ -21,8 +21,8 @@ import (
 
 var (
 	cmd                 = "./bin/filter_integration_base"
-	configAndResultName = []string{"whitelist_ISD_no", "whitelist_allN_no", "whitelist_upDownN_no",
-		"whitelist_coreN_no", "whitelist_no_AS"}
+	configAndResultName = []string{"whitelist_ISD_no", "whitelist_allN_no", "whitelist_upN_no",
+		"whitelist_downN_no", "whitelist_coreN_no", "whitelist_no_AS"}
 
 	AS120         = "1-ff00:0:120"
 	srcASesFor120 = "1-ff00:0:110,1-ff00:0:111,1-ff00:0:112,1-ff00:0:120,1-ff00:0:121,1-ff00:0:130,1-ff00:0:132," +
