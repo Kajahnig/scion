@@ -1,7 +1,7 @@
 [whitelist]
 PathToTopoFile = "../whitelisting/topology.json"
-OutsideWLSetting = "ISD"
-LocalWLSetting = "AS"
+OutsideSetting = "AcceptISD"
+LocalSetting = "Drop"
 RescanInterval = "24h"
 
 [pathlength]

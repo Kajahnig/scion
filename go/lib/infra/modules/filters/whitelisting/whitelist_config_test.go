@@ -36,8 +36,8 @@ func TestWhitelistConfig_Sample(t *testing.T) {
 
 		SoMsg("Path to topology file correct", cfg.PathToTopoFile, ShouldEqual, "../whitelisting/topology.json")
 		SoMsg("Rescanning interval correct", cfg.RescanInterval.Duration, ShouldEqual, 40*time.Minute)
-		SoMsg("Outside WL setting correct", cfg.OutsideWLSetting.OutsideWLSetting, ShouldEqual, WLISD)
-		SoMsg("Local WL setting correct", cfg.LocalWLSetting.LocalWLSetting, ShouldEqual, WLLocalInfraNodes)
+		SoMsg("Outside WL setting correct", cfg.OutsideSetting.OutsideWLSetting, ShouldEqual, AcceptISD)
+		SoMsg("Local WL setting correct", cfg.LocalSetting.LocalWLSetting, ShouldEqual, AcceptInfraNodes)
 	})
 }
 
@@ -45,15 +45,15 @@ func TestWhitelistConfig_Validate(t *testing.T) {
 	Convey("Validation of a config should fail if", t, func() {
 
 		Convey("Invalid path to topology file", func() {
-			err := makeConfig("invalid/path", time.Second, WLISD, WLLocalInfraNodes).Validate()
+			err := makeConfig("invalid/path", time.Second, AcceptISD, AcceptInfraNodes).Validate()
 			So(err, ShouldNotBeNil)
 		})
 		Convey("Rescanning interval is negative", func() {
-			err := makeConfig("./topology.json", -1*time.Second, WLISD, WLLocalInfraNodes).Validate()
+			err := makeConfig("./topology.json", -1*time.Second, AcceptISD, AcceptInfraNodes).Validate()
 			So(err, ShouldNotBeNil)
 		})
 		Convey("Local and outside whitelisting are set to no whitelisting", func() {
-			err := makeConfig("./topology.json", time.Second, NoOutsideWL, NoLocalWL).Validate()
+			err := makeConfig("./topology.json", time.Second, Drop, DropLocal).Validate()
 			So(err, ShouldNotBeNil)
 		})
 	})
@@ -63,9 +63,9 @@ func TestWhitelistConfig_InitDefaults(t *testing.T) {
 	Convey("Initialising defaults should", t, func() {
 
 		cfg := &WhitelistConfig{
-			PathToTopoFile:   "./toplogy.json",
-			OutsideWLSetting: outsideSetting{WLISD},
-			LocalWLSetting:   localSetting{WLLocalAS},
+			PathToTopoFile: "./toplogy.json",
+			OutsideSetting: outsideSetting{AcceptISD},
+			LocalSetting:   localSetting{AcceptLocal},
 		}
 
 		cfg.InitDefaults()
@@ -79,9 +79,9 @@ func TestWhitelistConfig_InitDefaults(t *testing.T) {
 func makeConfig(path string, interval time.Duration, osetting OutsideWLSetting,
 	lsetting LocalWLSetting) *WhitelistConfig {
 	return &WhitelistConfig{
-		PathToTopoFile:   path,
-		RescanInterval:   duration{interval},
-		OutsideWLSetting: outsideSetting{osetting},
-		LocalWLSetting:   localSetting{lsetting},
+		PathToTopoFile: path,
+		RescanInterval: duration{interval},
+		OutsideSetting: outsideSetting{osetting},
+		LocalSetting:   localSetting{lsetting},
 	}
 }

@@ -15,19 +15,35 @@
 package whitelisting
 
 import (
-	"github.com/scionproto/scion/go/lib/common"
+	"github.com/scionproto/scion/go/lib/addr"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters/whitelisting/whitelist_filters"
 	"github.com/scionproto/scion/go/lib/scmp"
 	"github.com/scionproto/scion/go/lib/snet"
+	"github.com/scionproto/scion/go/lib/topology"
 )
 
-var SCMPClassType = scmp.ClassType{
-	Class: scmp.C_Filtering,
-	Type:  scmp.T_F_NotOnWhitelist,
+var _ filters.PacketFilter = (*WhitelistFilter)(nil)
+
+type WhitelistFilter struct {
+	localIA addr.IA
+
+	LocalFilter   *whitelist_filters.WLFilter
+	OutsideFilter *whitelist_filters.WLFilter
 }
 
-func (f *WhitelistFilter) SCMPError() scmp.ClassType {
-	return SCMPClassType
+func NewWhitelistFilterFromConfig(cfg *WhitelistConfig) (*WhitelistFilter, error) {
+	err := cfg.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	topo, _ := getTopo(cfg.PathToTopoFile)
+
+	return &WhitelistFilter{
+		topo.ISD_AS,
+		localFilter(cfg),
+		outsideFilter(cfg, topo.ISD_AS.I)}, nil
 }
 
 func (f *WhitelistFilter) FilterPacket(pkt *snet.SCIONPacket) (filters.FilterResult, error) {
@@ -35,61 +51,64 @@ func (f *WhitelistFilter) FilterPacket(pkt *snet.SCIONPacket) (filters.FilterRes
 	address := pkt.Source
 
 	if address.IA == f.localIA {
-		return f.filterLocalAddr(address)
-	} else {
-		return f.filterRemoteAddr(address)
+		return (*f.LocalFilter).FilterAddress(pkt.Source)
+	}
+	return (*f.OutsideFilter).FilterAddress(pkt.Source)
+}
+
+func (f *WhitelistFilter) SCMPError() scmp.ClassType {
+	return scmp.ClassType{
+		Class: scmp.C_Filtering,
+		Type:  scmp.T_F_NotOnWhitelist,
 	}
 }
 
-func (f *WhitelistFilter) filterLocalAddr(addr snet.SCIONAddress) (filters.FilterResult, error) {
+func localFilter(cfg *WhitelistConfig) *whitelist_filters.WLFilter {
+	var lf whitelist_filters.WLFilter
 
-	switch f.LocalWLSetting {
-	case WLLocalAS:
-		return filters.FilterAccept, nil
-	case NoLocalWL:
-		return filters.FilterDrop, nil
-	case WLLocalInfraNodes:
-		return f.filterDependingOnInfraNodeWL(addr)
+	switch cfg.LocalSetting.LocalWLSetting {
+	case AcceptLocal:
+		lf = &whitelist_filters.AcceptingFilter{}
+	case AcceptInfraNodes:
+		lf = whitelist_filters.NewInfraNodesFilter(
+			cfg.PathToTopoFile,
+			cfg.RescanInterval.Duration)
 	default:
-		return filters.FilterError, common.NewBasicError("The local WL Setting has an illegal value",
-			nil, "filterSetting", f.LocalWLSetting)
+		lf = &whitelist_filters.DroppingFilter{}
 	}
+	return &lf
 }
 
-func (f *WhitelistFilter) filterDependingOnInfraNodeWL(addr snet.SCIONAddress) (filters.FilterResult, error) {
-	f.infraNodeListLock.RLock()
-	defer f.infraNodeListLock.RUnlock()
+func outsideFilter(cfg *WhitelistConfig, isd addr.ISD) *whitelist_filters.WLFilter {
+	var of whitelist_filters.WLFilter
 
-	if _, isPresent := f.localInfraNodes[addr.Host.IP().String()]; isPresent {
-		return filters.FilterAccept, nil
-	}
-	return filters.FilterDrop, nil
-}
-
-func (f *WhitelistFilter) filterRemoteAddr(addr snet.SCIONAddress) (filters.FilterResult, error) {
-
-	switch f.OutsideWLSetting {
-	case NoOutsideWL:
-		return filters.FilterDrop, nil
-	case WLISD:
-		if addr.IA.I == f.localIA.I {
-			return filters.FilterAccept, nil
-		}
-		return filters.FilterDrop, nil
-	case WLAllNeighbours, WLUpAndDownNeighbours, WLCoreNeighbours:
-		return f.filterDependingOnNeighboursWL(addr)
+	switch cfg.OutsideSetting.OutsideWLSetting {
+	case Accept:
+		of = &whitelist_filters.AcceptingFilter{}
+	case AcceptISD:
+		of = &whitelist_filters.ISDFilter{Isd: isd}
+	case AcceptNeighbours:
+		of = whitelist_filters.NewNeighbourFilter(
+			cfg.PathToTopoFile,
+			cfg.RescanInterval.Duration)
+	case AcceptUpstreamNeighbours:
+		of = whitelist_filters.NewUpNeighbourFilter(
+			cfg.PathToTopoFile,
+			cfg.RescanInterval.Duration)
+	case AcceptDownstreamNeighbours:
+		of = whitelist_filters.NewDownNeighbourFilter(
+			cfg.PathToTopoFile,
+			cfg.RescanInterval.Duration)
+	case AcceptCoreNeighbours:
+		of = whitelist_filters.NewCoreNeighbourFilter(
+			cfg.PathToTopoFile,
+			cfg.RescanInterval.Duration)
 	default:
-		return filters.FilterError, common.NewBasicError("The outside WL Setting has an illegal value",
-			nil, "filterSetting", f.OutsideWLSetting)
+		of = &whitelist_filters.DroppingFilter{}
 	}
+	return &of
 }
 
-func (f *WhitelistFilter) filterDependingOnNeighboursWL(addr snet.SCIONAddress) (filters.FilterResult, error) {
-	f.neighboursListLock.RLock()
-	defer f.neighboursListLock.RUnlock()
-
-	if _, isPresent := f.neighbouringNodes[addr.IA]; isPresent {
-		return filters.FilterAccept, nil
-	}
-	return filters.FilterDrop, nil
+func getTopo(pathToTopoFile string) (*topology.Topo, error) {
+	return topology.LoadFromFile(pathToTopoFile)
 }

@@ -51,8 +51,8 @@ func TestPacketFilterConfig(t *testing.T) {
 		SoMsg("Outside Max count correct", cfg.PacketRateLimit.LocalConfig.MaxCount, ShouldEqual, 5)
 		SoMsg("Path to topology file correct", cfg.Whitelist.PathToTopoFile, ShouldEqual, "../whitelisting/topology.json")
 		SoMsg("Rescanning interval correct", cfg.Whitelist.RescanInterval.Duration, ShouldEqual, 40*time.Minute)
-		SoMsg("Outside WL setting correct", cfg.Whitelist.OutsideWLSetting.OutsideWLSetting, ShouldEqual, whitelisting.WLISD)
-		SoMsg("Local WL setting correct", cfg.Whitelist.LocalWLSetting.LocalWLSetting, ShouldEqual, whitelisting.WLLocalInfraNodes)
+		SoMsg("Outside WL setting correct", cfg.Whitelist.OutsideSetting.OutsideWLSetting, ShouldEqual, whitelisting.AcceptISD)
+		SoMsg("Local WL setting correct", cfg.Whitelist.LocalSetting.LocalWLSetting, ShouldEqual, whitelisting.AcceptInfraNodes)
 
 	})
 

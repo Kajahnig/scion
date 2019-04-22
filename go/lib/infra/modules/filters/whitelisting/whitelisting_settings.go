@@ -20,29 +20,37 @@ type LocalWLSetting int
 const (
 	//Settings for Filtering requests from outside the local AS
 	//Drop All requests from outside of the local AS
-	NoOutsideWL OutsideWLSetting = iota
+	Drop OutsideWLSetting = iota
+	//Accept all traffic
+	Accept
 	// Whitelist all requests form the local ISD
-	WLISD
+	AcceptISD
 	// Whitelist only the requests from neighbouring ASes
-	WLAllNeighbours
-	// Whitelist only the requests from neighbouring up- or downstream ASes
-	WLUpAndDownNeighbours
-	//Whitelists only core neighbours
-	WLCoreNeighbours
+	AcceptNeighbours
+	// Whitelist only the requests from neighbouring upstream ASes
+	AcceptUpstreamNeighbours
+	//Whitelists only the requests from neighbouring downstream ASes
+	AcceptDownstreamNeighbours
+	//Whitelist only requests from core neighbours
+	AcceptCoreNeighbours
 )
 
 func (setting OutsideWLSetting) toString() string {
 	switch setting {
-	case NoOutsideWL:
-		return "No outside whitelisting"
-	case WLISD:
-		return "Whitelisting of ISD"
-	case WLAllNeighbours:
-		return "Whitelisting of all neighbours"
-	case WLUpAndDownNeighbours:
-		return "Whitelisting of up and downstream neighbours"
-	case WLCoreNeighbours:
-		return "Whitelisting of core neighbours"
+	case Drop:
+		return "Drop outside traffic"
+	case Accept:
+		return "Accept outside traffic"
+	case AcceptISD:
+		return "Accept traffic of local ISD"
+	case AcceptNeighbours:
+		return "Accept traffic of neighbours"
+	case AcceptUpstreamNeighbours:
+		return "Accept traffic of upstream neighbours"
+	case AcceptDownstreamNeighbours:
+		return "Accept traffic of downstream neighbours"
+	case AcceptCoreNeighbours:
+		return "Accept traffic of core neighbours"
 	default:
 		return "Unknown outside whitelisting setting"
 	}
@@ -50,22 +58,22 @@ func (setting OutsideWLSetting) toString() string {
 
 const (
 	//Settings for Filtering requests from the local AS
-	// Whitelist all requests form the local AS
-	NoLocalWL LocalWLSetting = iota
+	// Drop all requests from the local AS
+	DropLocal LocalWLSetting = iota
 	// Whitelist only local requests from infrastructure nodes
-	WLLocalInfraNodes
-	// Drop All requests from the local AS
-	WLLocalAS
+	AcceptInfraNodes
+	// Accept all requests
+	AcceptLocal
 )
 
 func (setting LocalWLSetting) toString() string {
 	switch setting {
-	case WLLocalAS:
-		return "Whitelisting of local AS"
-	case WLLocalInfraNodes:
-		return "Whitelisting of local infra nodes"
-	case NoLocalWL:
-		return "No Local Whitelisting"
+	case AcceptLocal:
+		return "Accept traffic of local AS"
+	case AcceptInfraNodes:
+		return "Accept traffic of local infra nodes"
+	case DropLocal:
+		return "Drop local traffic"
 	default:
 		return "Unknown local whitelisting setting"
 	}

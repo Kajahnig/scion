@@ -42,7 +42,7 @@ func TestCreateFiltersFromConfig(t *testing.T) {
 
 		filterSlice, err := CreateFiltersFromConfig(cfg)
 
-		Convey("Should return an error", func() {
+		Convey("Should return an error when creating the filters", func() {
 			So(err, ShouldNotBeNil)
 		})
 
@@ -64,7 +64,7 @@ func TestCreateFiltersFromConfig(t *testing.T) {
 
 		filterSlice, err := CreateFiltersFromConfig(cfg)
 
-		Convey("Should not return an error", func() {
+		Convey("Should not return an error when creating the filters", func() {
 			So(err, ShouldBeNil)
 		})
 

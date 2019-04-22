@@ -22,6 +22,21 @@ import (
 	"github.com/scionproto/scion/go/lib/config"
 )
 
+const (
+	defaultRescanningInterval = 24 * time.Hour
+	//shared settings
+	DropAll   = "Drop"
+	AcceptAll = "Accept"
+	//outside settings
+	ISD        = "AcceptISD"
+	Neighbours = "AcceptNeighbours"
+	Up         = "AcceptUpNeighbours"
+	Down       = "AcceptDownNeighbours"
+	Core       = "AcceptCoreNeighbours"
+	//local settings
+	Infra = "AcceptInfra"
+)
+
 const whitelistConfigSample = `
 #path to topology file
 PathToTopoFile = "../whitelisting/topology.json"
@@ -30,19 +45,19 @@ PathToTopoFile = "../whitelisting/topology.json"
 RescanInterval = "40m"
 
 #How requests from outside of the local AS should be filtered
-OutsideWLSetting = "ISD"
+OutsideSetting = "AcceptISD"
 
 #How requests from the local AS should be filtered
-LocalWLSetting = "infra"
+LocalSetting = "AcceptInfra"
 `
 
 var _ config.Config = (*WhitelistConfig)(nil)
 
 type WhitelistConfig struct {
-	PathToTopoFile   string
-	RescanInterval   duration
-	OutsideWLSetting outsideSetting
-	LocalWLSetting   localSetting
+	PathToTopoFile string
+	RescanInterval duration
+	OutsideSetting outsideSetting
+	LocalSetting   localSetting
 }
 
 func (cfg *WhitelistConfig) InitDefaults() {
@@ -61,7 +76,7 @@ func (cfg *WhitelistConfig) Validate() error {
 		return common.NewBasicError("Negative or zero rescanning interval",
 			nil, "interval", cfg.RescanInterval.Duration)
 	}
-	if cfg.LocalWLSetting.LocalWLSetting == NoLocalWL && cfg.OutsideWLSetting.OutsideWLSetting == NoOutsideWL {
+	if cfg.LocalSetting.LocalWLSetting == DropLocal && cfg.OutsideSetting.OutsideWLSetting == Drop {
 		return common.NewBasicError("Cannot initialise whitelisting filter with no local"+
 			" and no outside whitelisting", nil)
 	}
@@ -93,16 +108,20 @@ type outsideSetting struct {
 func (s *outsideSetting) UnmarshalText(text []byte) error {
 	stringFormat := string(text)
 	switch stringFormat {
+	case DropAll:
+		s.OutsideWLSetting = Drop
+	case AcceptAll:
+		s.OutsideWLSetting = Accept
 	case ISD:
-		s.OutsideWLSetting = WLISD
-	case allNeighbours:
-		s.OutsideWLSetting = WLAllNeighbours
-	case upAndDownNeighbours:
-		s.OutsideWLSetting = WLUpAndDownNeighbours
-	case coreNeighbours:
-		s.OutsideWLSetting = WLCoreNeighbours
-	case no:
-		s.OutsideWLSetting = NoOutsideWL
+		s.OutsideWLSetting = AcceptISD
+	case Neighbours:
+		s.OutsideWLSetting = AcceptNeighbours
+	case Up:
+		s.OutsideWLSetting = AcceptUpstreamNeighbours
+	case Down:
+		s.OutsideWLSetting = AcceptDownstreamNeighbours
+	case Core:
+		s.OutsideWLSetting = AcceptCoreNeighbours
 	default:
 		return common.NewBasicError("Unknown value for outside whitelist setting",
 			nil, "value", stringFormat)
@@ -117,12 +136,12 @@ type localSetting struct {
 func (s *localSetting) UnmarshalText(text []byte) error {
 	stringFormat := string(text)
 	switch stringFormat {
-	case AS:
-		s.LocalWLSetting = WLLocalAS
-	case infra:
-		s.LocalWLSetting = WLLocalInfraNodes
-	case no:
-		s.LocalWLSetting = NoLocalWL
+	case DropAll:
+		s.LocalWLSetting = DropLocal
+	case AcceptAll:
+		s.LocalWLSetting = AcceptLocal
+	case Infra:
+		s.LocalWLSetting = AcceptInfraNodes
 	default:
 		return common.NewBasicError("Unknown value for local whitelist setting",
 			nil, "value", stringFormat)
