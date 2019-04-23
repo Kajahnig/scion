@@ -1,0 +1,3 @@
+//requests for server in AS 120
+1-ff00:0:110    1-ff00:0:120    ChainReq    pathLength
+1-ff00:0:110    1-ff00:0:120    TRCReq      whitelist
