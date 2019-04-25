@@ -26,6 +26,7 @@ import (
 )
 
 var _ WLFilter = (*ISDFilter)(nil)
+var _ filters.ExternalFilter = (*ISDFilter)(nil)
 
 type ISDFilter struct {
 	Isd addr.ISD
@@ -38,7 +39,15 @@ func (f *ISDFilter) FilterAddress(addr snet.SCIONAddress) (filters.FilterResult,
 	return filters.FilterDrop, nil
 }
 
+func (f *ISDFilter) FilterExternal(addr snet.Addr) (filters.FilterResult, error) {
+	if addr.IA.I == f.Isd {
+		return filters.FilterAccept, nil
+	}
+	return filters.FilterDrop, nil
+}
+
 var _ WLFilter = (*NeighbourFilter)(nil)
+var _ filters.ExternalFilter = (*ISDFilter)(nil)
 
 type NeighbourFilter struct {
 	Neighbours map[addr.IA]bool
@@ -98,6 +107,16 @@ func NewCoreNeighbourFilter(pathToTopoFile string, rescanInterval time.Duration)
 }
 
 func (f *NeighbourFilter) FilterAddress(addr snet.SCIONAddress) (filters.FilterResult, error) {
+	f.Lock.RLock()
+	defer f.Lock.RUnlock()
+
+	if _, isPresent := f.Neighbours[addr.IA]; isPresent {
+		return filters.FilterAccept, nil
+	}
+	return filters.FilterDrop, nil
+}
+
+func (f *NeighbourFilter) FilterExternal(addr snet.Addr) (filters.FilterResult, error) {
 	f.Lock.RLock()
 	defer f.Lock.RUnlock()
 

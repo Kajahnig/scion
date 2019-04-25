@@ -65,7 +65,7 @@ func TestRateLimitFilter_filterFromConfig(t *testing.T) {
 
 	Convey("Creating a rate limiting filter from a configuration", t, func() {
 
-		filter, err := filterFromConfig(cfg)
+		filter, err := FilterFromConfig(cfg)
 
 		Convey("Should not return an error", func() {
 			So(err, ShouldBeNil)
@@ -85,7 +85,7 @@ func TestRateLimitFilter_filterFromConfig(t *testing.T) {
 
 	Convey("Creating a rate limiting filter from a nil configuration", t, func() {
 
-		filter, err := filterFromConfig(nil)
+		filter, err := FilterFromConfig(nil)
 
 		Convey("Should not return an error", func() {
 			So(err, ShouldBeNil)
@@ -106,7 +106,7 @@ func TestRateLimitFilter_checkLimit(t *testing.T) {
 
 	Convey("Checking the limit on a rate limit filter with max count 1", t, func() {
 
-		filter, err := filterFromConfig(cfg)
+		filter, err := FilterFromConfig(cfg)
 		So(err, ShouldBeNil)
 		So(filter, ShouldNotBeNil)
 
@@ -138,7 +138,7 @@ func TestRateLimitFilter_filterReset(t *testing.T) {
 
 	Convey("Checking the limit on a rate limit filter with max count 2", t, func() {
 
-		filter, err := filterFromConfig(cfg)
+		filter, err := FilterFromConfig(cfg)
 		So(err, ShouldBeNil)
 		So(filter, ShouldNotBeNil)
 

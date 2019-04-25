@@ -24,6 +24,8 @@ type WLFilter interface {
 }
 
 var _ WLFilter = (*AcceptingFilter)(nil)
+var _ filters.InternalFilter = (*AcceptingFilter)(nil)
+var _ filters.ExternalFilter = (*AcceptingFilter)(nil)
 
 type AcceptingFilter struct{}
 
@@ -31,10 +33,28 @@ func (f *AcceptingFilter) FilterAddress(addr snet.SCIONAddress) (filters.FilterR
 	return filters.FilterAccept, nil
 }
 
+func (f *AcceptingFilter) FilterInternal(addr snet.Addr) (filters.FilterResult, error) {
+	return filters.FilterAccept, nil
+}
+
+func (f *AcceptingFilter) FilterExternal(addr snet.Addr) (filters.FilterResult, error) {
+	return filters.FilterAccept, nil
+}
+
 var _ WLFilter = (*DroppingFilter)(nil)
+var _ filters.InternalFilter = (*DroppingFilter)(nil)
+var _ filters.ExternalFilter = (*DroppingFilter)(nil)
 
 type DroppingFilter struct{}
 
 func (f *DroppingFilter) FilterAddress(addr snet.SCIONAddress) (filters.FilterResult, error) {
+	return filters.FilterDrop, nil
+}
+
+func (f *DroppingFilter) FilterInternal(addr snet.Addr) (filters.FilterResult, error) {
+	return filters.FilterDrop, nil
+}
+
+func (f *DroppingFilter) FilterExternal(addr snet.Addr) (filters.FilterResult, error) {
 	return filters.FilterDrop, nil
 }

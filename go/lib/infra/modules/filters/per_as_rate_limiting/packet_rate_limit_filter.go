@@ -23,8 +23,8 @@ import (
 var _ filters.PacketFilter = (*PacketRateLimitFilter)(nil)
 
 type PacketRateLimitFilter struct {
-	localRateLimitFilter   *rateLimitFilter
-	outsideRateLimitFilter *rateLimitFilter
+	localRateLimitFilter   *RateLimitFilter
+	outsideRateLimitFilter *RateLimitFilter
 }
 
 func NewPacketRateLimitingFilterFromConfig(cfg *PacketRateLimitConfig) (*PacketRateLimitFilter, error) {
@@ -35,11 +35,11 @@ func NewPacketRateLimitingFilterFromConfig(cfg *PacketRateLimitConfig) (*PacketR
 	}
 	cfg.InitDefaults()
 
-	localFilter, err := filterFromConfig(cfg.LocalConfig)
+	localFilter, err := FilterFromConfig(cfg.LocalConfig)
 	if err != nil {
 		return nil, err
 	}
-	outsideFilter, err := filterFromConfig(cfg.OutsideConfig)
+	outsideFilter, err := FilterFromConfig(cfg.OutsideConfig)
 	if err != nil {
 		return nil, err
 	}

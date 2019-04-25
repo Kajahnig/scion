@@ -65,11 +65,11 @@ func (cfg PacketRateLimitConfig) ConfigName() string {
 func (cfg PacketRateLimitConfig) Sample(dst io.Writer, path config.Path, ctx config.CtxMap) {
 	config.WriteSample(dst, path, nil,
 		config.StringSampler{
-			Text: rateLimitSample,
+			Text: RateLimitSample,
 			Name: "LocalConfig",
 		},
 		config.StringSampler{
-			Text: rateLimitSample,
+			Text: RateLimitSample,
 			Name: "OutsideConfig",
 		},
 	)

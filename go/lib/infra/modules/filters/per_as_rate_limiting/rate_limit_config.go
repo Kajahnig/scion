@@ -23,14 +23,14 @@ import (
 )
 
 const (
-	rateLimitSample = `
-# set number of local clients
+	RateLimitSample = `
+# number of clients to dimension the filter
 NumOfClients = 100
 
-# set number of ASes
+# interval in which the filter gets reset
 Interval = "20s"
 
-# set local interval
+# maximum of requests a client/AS can send per interval
 MaxCount = 5
 `
 	//5 minutes default interval
@@ -76,7 +76,7 @@ func (cfg RateLimitConfig) ConfigName() string {
 }
 
 func (cfg RateLimitConfig) Sample(dst io.Writer, path config.Path, ctx config.CtxMap) {
-	config.WriteString(dst, rateLimitSample)
+	config.WriteString(dst, RateLimitSample)
 }
 
 type duration struct {

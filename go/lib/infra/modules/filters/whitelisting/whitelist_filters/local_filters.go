@@ -25,6 +25,7 @@ import (
 )
 
 var _ WLFilter = (*InfraNodesFilter)(nil)
+var _ filters.InternalFilter = (*InfraNodesFilter)(nil)
 
 type InfraNodesFilter struct {
 	InfraNodes map[string]bool
@@ -49,6 +50,16 @@ func (f *InfraNodesFilter) FilterAddress(addr snet.SCIONAddress) (filters.Filter
 	defer f.Lock.RUnlock()
 
 	if _, isPresent := f.InfraNodes[addr.Host.IP().String()]; isPresent {
+		return filters.FilterAccept, nil
+	}
+	return filters.FilterDrop, nil
+}
+
+func (f *InfraNodesFilter) FilterInternal(addr snet.Addr) (filters.FilterResult, error) {
+	f.Lock.RLock()
+	defer f.Lock.RUnlock()
+
+	if _, isPresent := f.InfraNodes[addr.Host.L3.IP().String()]; isPresent {
 		return filters.FilterAccept, nil
 	}
 	return filters.FilterDrop, nil

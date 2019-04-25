@@ -21,16 +21,30 @@ import (
 	"github.com/scionproto/scion/go/lib/infra/modules/filters"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/counting_bloom"
 	"github.com/scionproto/scion/go/lib/periodic"
+	"github.com/scionproto/scion/go/lib/snet"
 )
 
-type rateLimitFilter struct {
+var _ filters.InternalFilter = (*RateLimitFilter)(nil)
+var _ filters.ExternalFilter = (*RateLimitFilter)(nil)
+
+type RateLimitFilter struct {
 	filter      *counting_bloom.CBF
 	numCells    uint32
 	numHashFunc uint32
 	maxValue    uint32
 }
 
-func (f *rateLimitFilter) checkLimit(addr []byte) (filters.FilterResult, error) {
+func (f *RateLimitFilter) FilterInternal(addr snet.Addr) (filters.FilterResult, error) {
+	addrAsBytes := []byte(addr.Host.L3.IP().String())
+	return f.checkLimit(addrAsBytes)
+}
+
+func (f *RateLimitFilter) FilterExternal(addr snet.Addr) (filters.FilterResult, error) {
+	addrAsBytes := []byte(addr.IA.String())
+	return f.checkLimit(addrAsBytes)
+}
+
+func (f *RateLimitFilter) checkLimit(addr []byte) (filters.FilterResult, error) {
 	rateLimitExceeded, err := f.filter.CheckIfRateLimitExceeded(addr)
 	if err != nil {
 		return filters.FilterError, err
@@ -41,7 +55,7 @@ func (f *rateLimitFilter) checkLimit(addr []byte) (filters.FilterResult, error) 
 	return filters.FilterAccept, nil
 }
 
-func filterFromConfig(cfg *RateLimitConfig) (*rateLimitFilter, error) {
+func FilterFromConfig(cfg *RateLimitConfig) (*RateLimitFilter, error) {
 	if cfg == nil {
 		return nil, nil
 	}
@@ -54,7 +68,7 @@ func filterFromConfig(cfg *RateLimitConfig) (*rateLimitFilter, error) {
 		return nil, err
 	}
 
-	filter := &rateLimitFilter{CBF, numCells, numHashFunc, maxValue}
+	filter := &RateLimitFilter{CBF, numCells, numHashFunc, maxValue}
 
 	periodic.StartPeriodicTask(
 		&FilterResetter{filter.filter},

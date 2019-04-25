@@ -49,3 +49,11 @@ type PacketFilter interface {
 	FilterPacket(pkt *snet.SCIONPacket) (FilterResult, error)
 	SCMPError() scmp.ClassType
 }
+
+type InternalFilter interface {
+	FilterInternal(addr snet.Addr) (FilterResult, error)
+}
+
+type ExternalFilter interface {
+	FilterExternal(addr snet.Addr) (FilterResult, error)
+}
