@@ -29,11 +29,11 @@ import (
 var (
 	name                  = "second_filter_integration_"
 	cmd                   = "./bin/second_filter_base"
-	attempts              = 1              //flag.Int("attempts", 1, "Number of attempts before giving up.")
-	maxNumberOfGoRoutines = 2              //flag.Int("goRoutines", 2, "Maximum number of goroutines.")
-	testFileName          = "first_try"    //flag.String("filename", "", "Name of the result and config files.")
-	srcASList             = "1-ff00:0:110" //flag.String("srcIAs", "", "Comma separated list of source IAs (clients).")
-	dstASList             = "1-ff00:0:120" //flag.String("dstIAs", "", "Comma separated list of destination IAs (servers).")
+	attempts              = 1                           //flag.Int("attempts", 1, "Number of attempts before giving up.")
+	maxNumberOfGoRoutines = 2                           //flag.Int("goRoutines", 2, "Maximum number of goroutines.")
+	testFileName          = "first_try"                 //flag.String("filename", "", "Name of the result and config files.")
+	srcASList             = "1-ff00:0:110,1-ff00:0:120" //flag.String("srcIAs", "", "Comma separated list of source IAs (clients).")
+	dstASList             = "1-ff00:0:120"              //flag.String("dstIAs", "", "Comma separated list of destination IAs (servers).")
 )
 
 func main() {
@@ -55,7 +55,7 @@ func realMain() int {
 		"-remote", integration.DstAddrPattern + ":" + integration.ServerPortReplace,
 		"-results", testFileName}
 	serverArgs := []string{"-log.console", "debug", "-mode", "server",
-		"-local", integration.DstAddrPattern + ":0"}
+		"-local", integration.DstAddrPattern + ":0", "-results", testFileName}
 	in := integration.NewBinaryIntegration(intTestName, cmd, clientArgs, serverArgs)
 	if err := runTests(in, integration.IAPairs(integration.DispAddr)); err != nil {
 		log.Error("Error during tests: " + err.Error())

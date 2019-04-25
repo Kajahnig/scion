@@ -23,6 +23,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/BurntSushi/toml"
+
 	"github.com/scionproto/scion/go/integration"
 	"github.com/scionproto/scion/go/lib/common"
 	"github.com/scionproto/scion/go/lib/ctrl/ack"
@@ -30,6 +32,7 @@ import (
 	"github.com/scionproto/scion/go/lib/infra"
 	"github.com/scionproto/scion/go/lib/infra/disp"
 	"github.com/scionproto/scion/go/lib/infra/messenger"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters/filter_handler"
 	"github.com/scionproto/scion/go/lib/infra/transport"
 	libint "github.com/scionproto/scion/go/lib/integration"
 	"github.com/scionproto/scion/go/lib/log"
@@ -40,17 +43,16 @@ import (
 
 const (
 	ResultDir = "./go/integration/filter_results"
+	ConfigDir = "./go/integration/filter_configs"
 )
 
 type Result string
 type RequestType string
 
 const (
+	Pass       Result = "pass"
 	Whitelist  Result = "whitelist"
 	Pathlength Result = "pathLength"
-
-	TRCReq   RequestType = "TRCReq"
-	ChainReq RequestType = "ChainReq"
 )
 
 var (
@@ -80,8 +82,6 @@ func addFlags() {
 	flag.Var((*snet.Addr)(&remote), "remote", "(Mandatory for clients) address to connect to")
 	flag.StringVar(&resultFileName, "results", "",
 		"(Mandatory for clients) Name of the result file in "+ResultDir)
-	//Todo add the config file flag here so the server can use it to make handlers,
-	// or actually just use the resultFileName, should be the same anyway
 }
 
 func validateFlags() {
@@ -128,17 +128,31 @@ func (s server) run() {
 			),
 		},
 	)
-	//TODO, parse the config for the firewall filters and set up handlers according to that
+
+	var cfg filter_handler.FilterHandlerConfig
+	_, err = toml.DecodeFile(ConfigDir+"/"+resultFileName+".toml", &cfg)
+	if err != nil {
+		integration.LogFatal("Unable to decode configuration file", "err", err)
+	}
+	cfg.InitDefaults()
+	err = cfg.Validate()
+	if err != nil {
+		integration.LogFatal("Error validating the configuration file", "err", err)
+	}
+
+	err = filter_handler.Init(integration.Local.IA, &cfg, "./gen/ISD1/ASff00_0_120/br1-ff00_0_120-1/topology.json")
 
 	//add handlers to the messenger
-	msgr.AddHandler(infra.TRCRequest, newHandler(proto.Ack_ErrCode_ok, Whitelist))
-	msgr.AddHandler(infra.ChainRequest, newHandler(proto.Ack_ErrCode_reject, Pathlength))
+	msgr.AddHandler(infra.TRCRequest,
+		filter_handler.New(infra.TRCRequest, newAcceptingHandler()))
+	msgr.AddHandler(infra.ChainRequest,
+		filter_handler.New(infra.ChainRequest, newAcceptingHandler()))
 	log.Debug("Listening", "local", conn.LocalAddr())
 	//listen and serve with messenger
 	msgr.ListenAndServe()
 }
 
-func newHandler(errorCode proto.Ack_ErrCode, reason Result) infra.Handler {
+func newAcceptingHandler() infra.Handler {
 	return infra.HandlerFunc(func(r *infra.Request) *infra.HandlerResult {
 		ctx := r.Context()
 		logger := log.FromCtx(ctx)
@@ -148,24 +162,20 @@ func newHandler(errorCode proto.Ack_ErrCode, reason Result) infra.Handler {
 			return infra.MetricsErrInternal
 		}
 		rwriter.SendAckReply(ctx, &ack.Ack{
-			Err:     errorCode,
-			ErrDesc: string(reason),
+			Err:     proto.Ack_ErrCode_ok,
+			ErrDesc: "Passed filters",
 		})
 		return infra.MetricsResultOk
 	})
 }
 
 type client struct {
-	conn               snet.Conn
-	msgr               infra.Messenger
-	requestType        RequestType
-	resultType         Result
-	numOfRequests      int
-	maxPassingRequests int
+	conn snet.Conn
+	msgr infra.Messenger
 }
 
 type requestSeries struct {
-	requestType        RequestType
+	requestType        infra.MessageType
 	resultType         Result
 	numOfRequests      int
 	maxPassingRequests int
@@ -206,15 +216,15 @@ func (c client) run() int {
 
 func (c client) sendRequestSeries(rs requestSeries) int {
 	switch rs.requestType {
-	case TRCReq:
-		err := c.requestTRC(proto.Ack_ErrCode_ok)
+	case infra.TRCRequest:
+		err := c.requestTRC(rs.resultType)
 		if err != nil {
 			log.Info("Error in TRC request", "err", err)
 			return 1
 		}
 		return 0
-	case ChainReq:
-		err := c.requestCert(proto.Ack_ErrCode_reject)
+	case infra.ChainRequest:
+		err := c.requestCert(rs.resultType)
 		if err != nil {
 			log.Info("Error in TRC request", "err", err)
 			return 1
@@ -224,7 +234,7 @@ func (c client) sendRequestSeries(rs requestSeries) int {
 	return 1
 }
 
-func (c client) requestTRC(answer proto.Ack_ErrCode) error {
+func (c client) requestTRC(answerType Result) error {
 	req := &cert_mgmt.TRCReq{
 		CacheOnly: false,
 		ISD:       remote.IA.I,
@@ -235,10 +245,10 @@ func (c client) requestTRC(answer proto.Ack_ErrCode) error {
 	defer cancelF()
 
 	_, err := c.msgr.GetTRC(ctx, req, &remote, messenger.NextId())
-	return checkError(answer, err)
+	return checkError(answerType, err)
 }
 
-func (c client) requestCert(answer proto.Ack_ErrCode) error {
+func (c client) requestCert(answerType Result) error {
 	req := &cert_mgmt.ChainReq{
 		CacheOnly: false,
 		RawIA:     remote.IA.IAInt(),
@@ -249,18 +259,23 @@ func (c client) requestCert(answer proto.Ack_ErrCode) error {
 	defer cancelF()
 
 	_, err := c.msgr.GetCertChain(ctx, req, &remote, messenger.NextId())
-	return checkError(answer, err)
+	return checkError(answerType, err)
 }
 
-func checkError(answer proto.Ack_ErrCode, err error) error {
+func checkError(answer Result, err error) error {
 	switch t := err.(type) {
 	case *infra.Error:
-		if t.Message.Err == answer {
-			return nil
+		if answer == Pass {
+			if t.Message.Err == proto.Ack_ErrCode_ok {
+				return nil
+			}
 		} else {
-			return common.NewBasicError(fmt.Sprintf("Expected %v but got %v",
-				answer.String(), t.Message.Err.String()), nil)
+			if t.Message.Err == proto.Ack_ErrCode_reject {
+				return nil
+			}
 		}
+		return common.NewBasicError(fmt.Sprintf("Expected %v but got %v",
+			answer, t.Message.Err.String()), nil)
 	}
 	return common.NewBasicError("Expected error of type infra.Error but got", err)
 }
@@ -302,7 +317,14 @@ func getRequestSequences() ([]requestSeries, error) {
 }
 
 func parseResultInfo(resultParams []string) (requestSeries, error) {
-	requstType := RequestType(resultParams[0])
+	var requestType infra.MessageType
+	if resultParams[0] == infra.TRCRequest.String() {
+		requestType = infra.TRCRequest
+	} else if resultParams[0] == infra.ChainRequest.String() {
+		requestType = infra.ChainRequest
+	} else {
+		integration.LogFatal("Unknown request type", "requestType", resultParams[0])
+	}
 	result := Result(resultParams[1])
 	var numOfRequests = 1
 	var numOfSuccessfulRequests = 0
@@ -323,7 +345,7 @@ func parseResultInfo(resultParams []string) (requestSeries, error) {
 			}
 		}
 	}
-	return requestSeries{requstType, result,
+	return requestSeries{requestType, result,
 		numOfRequests, numOfSuccessfulRequests}, err
 }
 

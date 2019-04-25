@@ -16,7 +16,6 @@ package filter_handler
 
 import (
 	"bytes"
-	"github.com/scionproto/scion/go/lib/infra"
 	"reflect"
 	"testing"
 
@@ -24,6 +23,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 
 	"github.com/scionproto/scion/go/lib/addr"
+	"github.com/scionproto/scion/go/lib/infra"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/per_as_rate_limiting"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/whitelisting/whitelist_filters"
 )
