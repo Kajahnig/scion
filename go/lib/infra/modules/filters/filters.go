@@ -52,8 +52,10 @@ type PacketFilter interface {
 
 type InternalFilter interface {
 	FilterInternal(addr snet.Addr) (FilterResult, error)
+	ErrorMessage() string
 }
 
 type ExternalFilter interface {
 	FilterExternal(addr snet.Addr) (FilterResult, error)
+	ErrorMessage() string
 }

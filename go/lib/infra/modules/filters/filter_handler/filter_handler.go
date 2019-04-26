@@ -67,7 +67,7 @@ func (h *FilterHandler) Handle(r *infra.Request) *infra.HandlerResult {
 	if address.IA == localIA {
 		for _, f := range h.internalFilters {
 			if result, err := f.FilterInternal(*address); result != filters.FilterAccept {
-				errSendingAck := sendErrorAck(r)
+				errSendingAck := sendErrorAck(r, f.ErrorMessage())
 				if err != nil || errSendingAck {
 					return infra.MetricsErrInternal
 				}
@@ -77,7 +77,7 @@ func (h *FilterHandler) Handle(r *infra.Request) *infra.HandlerResult {
 	} else {
 		for _, f := range h.externalFilters {
 			if result, err := f.FilterExternal(*address); result != filters.FilterAccept {
-				errSendingAck := sendErrorAck(r)
+				errSendingAck := sendErrorAck(r, f.ErrorMessage())
 				if err != nil || errSendingAck {
 					return infra.MetricsErrInternal
 				}
@@ -88,7 +88,7 @@ func (h *FilterHandler) Handle(r *infra.Request) *infra.HandlerResult {
 	return h.originalHandler.Handle(r)
 }
 
-func sendErrorAck(r *infra.Request) bool {
+func sendErrorAck(r *infra.Request, errDesc string) bool {
 	ctx := r.Context()
 	logger := log.FromCtx(ctx)
 	rwriter, ok := infra.ResponseWriterFromContext(ctx)
@@ -98,7 +98,7 @@ func sendErrorAck(r *infra.Request) bool {
 	}
 	err := rwriter.SendAckReply(ctx, &ack.Ack{
 		Err:     proto.Ack_ErrCode_reject,
-		ErrDesc: "Filter reject",
+		ErrDesc: errDesc,
 	})
 	if err != nil {
 		return false

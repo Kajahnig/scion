@@ -19,6 +19,8 @@ import (
 	"github.com/scionproto/scion/go/lib/snet"
 )
 
+const ErrMsg = "Not on whitelist"
+
 type WLFilter interface {
 	FilterAddress(addr snet.SCIONAddress) (filters.FilterResult, error)
 }
@@ -41,6 +43,10 @@ func (f *AcceptingFilter) FilterExternal(addr snet.Addr) (filters.FilterResult, 
 	return filters.FilterAccept, nil
 }
 
+func (f *AcceptingFilter) ErrorMessage() string {
+	return ErrMsg
+}
+
 var _ WLFilter = (*DroppingFilter)(nil)
 var _ filters.InternalFilter = (*DroppingFilter)(nil)
 var _ filters.ExternalFilter = (*DroppingFilter)(nil)
@@ -57,4 +63,8 @@ func (f *DroppingFilter) FilterInternal(addr snet.Addr) (filters.FilterResult, e
 
 func (f *DroppingFilter) FilterExternal(addr snet.Addr) (filters.FilterResult, error) {
 	return filters.FilterDrop, nil
+}
+
+func (f *DroppingFilter) ErrorMessage() string {
+	return ErrMsg
 }

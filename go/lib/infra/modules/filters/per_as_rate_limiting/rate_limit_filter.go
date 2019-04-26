@@ -24,6 +24,8 @@ import (
 	"github.com/scionproto/scion/go/lib/snet"
 )
 
+const ErrMsg = "Request limit exceeded"
+
 var _ filters.InternalFilter = (*RateLimitFilter)(nil)
 var _ filters.ExternalFilter = (*RateLimitFilter)(nil)
 
@@ -42,6 +44,10 @@ func (f *RateLimitFilter) FilterInternal(addr snet.Addr) (filters.FilterResult, 
 func (f *RateLimitFilter) FilterExternal(addr snet.Addr) (filters.FilterResult, error) {
 	addrAsBytes := []byte(addr.IA.String())
 	return f.checkLimit(addrAsBytes)
+}
+
+func (f *RateLimitFilter) ErrorMessage() string {
+	return ErrMsg
 }
 
 func (f *RateLimitFilter) checkLimit(addr []byte) (filters.FilterResult, error) {

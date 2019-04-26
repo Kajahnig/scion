@@ -46,6 +46,10 @@ func (f *ISDFilter) FilterExternal(addr snet.Addr) (filters.FilterResult, error)
 	return filters.FilterDrop, nil
 }
 
+func (f *ISDFilter) ErrorMessage() string {
+	return ErrMsg
+}
+
 var _ WLFilter = (*NeighbourFilter)(nil)
 var _ filters.ExternalFilter = (*ISDFilter)(nil)
 
@@ -124,4 +128,8 @@ func (f *NeighbourFilter) FilterExternal(addr snet.Addr) (filters.FilterResult, 
 		return filters.FilterAccept, nil
 	}
 	return filters.FilterDrop, nil
+}
+
+func (f *NeighbourFilter) ErrorMessage() string {
+	return ErrMsg
 }

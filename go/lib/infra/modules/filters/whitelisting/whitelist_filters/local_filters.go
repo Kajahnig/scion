@@ -64,3 +64,7 @@ func (f *InfraNodesFilter) FilterInternal(addr snet.Addr) (filters.FilterResult,
 	}
 	return filters.FilterDrop, nil
 }
+
+func (f *InfraNodesFilter) ErrorMessage() string {
+	return ErrMsg
+}
