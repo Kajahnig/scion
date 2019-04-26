@@ -29,11 +29,12 @@ import (
 var (
 	name                  = "second_filter_integration_"
 	cmd                   = "./bin/second_filter_base"
-	attempts              = 1                           //flag.Int("attempts", 1, "Number of attempts before giving up.")
-	maxNumberOfGoRoutines = 2                           //flag.Int("goRoutines", 2, "Maximum number of goroutines.")
-	testFileName          = "first_try"                 //flag.String("filename", "", "Name of the result and config files.")
-	srcASList             = "1-ff00:0:110,1-ff00:0:120" //flag.String("srcIAs", "", "Comma separated list of source IAs (clients).")
-	dstASList             = "1-ff00:0:120"              //flag.String("dstIAs", "", "Comma separated list of destination IAs (servers).")
+	attempts              = flag.Int("attempts", 1, "Number of attempts before giving up.")
+	maxNumberOfGoRoutines = flag.Int("goRoutines", 2, "Maximum number of goroutines.")
+	testFileName          = flag.String("filename", "", "Name of the result and config files.")
+	srcASList             = flag.String("srcIAs", "", "Comma separated list of source IAs (clients).")
+	dstASList             = flag.String("dstIAs", "", "Comma separated list of destination IAs (servers).")
+	topoFilePath          = flag.String("topoFilePath", "", "Path to the topology file.")
 )
 
 func main() {
@@ -42,20 +43,21 @@ func main() {
 }
 
 func realMain() int {
-	intTestName := name + testFileName
+	intTestName := name + *testFileName
 	log.Info("Starting integration test for " + intTestName)
-	if err := integration.InitWithGivenIAs(intTestName, srcASList, dstASList); err != nil {
+	if err := integration.InitWithGivenIAs(intTestName, *srcASList, *dstASList); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to init: %s\n", err)
 		return 1
 	}
 	defer log.LogPanicAndExit()
 	defer log.Flush()
-	clientArgs := []string{"-log.console", "debug", "-attempts", strconv.Itoa(attempts),
+	clientArgs := []string{"-log.console", "debug", "-attempts", strconv.Itoa(*attempts),
 		"-local", integration.SrcAddrPattern + ":0",
 		"-remote", integration.DstAddrPattern + ":" + integration.ServerPortReplace,
-		"-results", testFileName}
+		"-results", *testFileName}
 	serverArgs := []string{"-log.console", "debug", "-mode", "server",
-		"-local", integration.DstAddrPattern + ":0", "-results", testFileName}
+		"-local", integration.DstAddrPattern + ":0", "-results", *testFileName,
+		"-topoFilePath", *topoFilePath}
 	in := integration.NewBinaryIntegration(intTestName, cmd, clientArgs, serverArgs)
 	if err := runTests(in, integration.IAPairs(integration.DispAddr)); err != nil {
 		log.Error("Error during tests: " + err.Error())
@@ -79,7 +81,7 @@ func runTests(in integration.Integration, pairs []integration.IAPair) error {
 			defer s.Close()
 		}
 		// Now start the clients for srcDest pair in parallel
-		timeout := integration.DefaultRunTimeout + integration.CtxTimeout*time.Duration(attempts)
-		return integration.RunUnaryTestsWithMoreGoRoutines(in, pairs, timeout, maxNumberOfGoRoutines)
+		timeout := integration.DefaultRunTimeout + integration.CtxTimeout*time.Duration(*attempts)
+		return integration.RunUnaryTestsWithMoreGoRoutines(in, pairs, timeout, *maxNumberOfGoRoutines)
 	})
 }

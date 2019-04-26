@@ -1,0 +1,9 @@
+#Test whitelisting for the Core and down neighbour setting
+[RequestConfigs]
+    [RequestConfigs.TRCRequest]
+    InternalWL = "Drop"
+    ExternalWL = "CoreNeighbours"
+
+    [RequestConfigs.ChainRequest]
+    InternalWL = "Drop"
+    ExternalWL = "DownNeighbours"

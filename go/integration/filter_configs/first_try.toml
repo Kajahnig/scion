@@ -1,6 +1,0 @@
-[RequestConfigs]
-    [RequestConfigs.TRCRequest]
-    ExternalWL = "Drop"
-
-    [RequestConfigs.ChainRequest]
-    InternalWL = "Drop"

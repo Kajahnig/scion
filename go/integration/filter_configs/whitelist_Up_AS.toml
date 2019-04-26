@@ -1,0 +1,8 @@
+#Test whitelisting for the up neighbour and AS setting
+[RequestConfigs]
+    [RequestConfigs.TRCRequest]
+    InternalWL = "Drop"
+    ExternalWL = "UpNeighbours"
+
+    [RequestConfigs.ChainRequest]
+    ExternalWL = "Drop"

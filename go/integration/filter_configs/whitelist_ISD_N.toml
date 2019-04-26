@@ -1,0 +1,9 @@
+#Test whitelisting for the ISD and neighbour setting
+[RequestConfigs]
+    [RequestConfigs.TRCRequest]
+    InternalWL = "Drop"
+    ExternalWL = "ISD"
+
+    [RequestConfigs.ChainRequest]
+    InternalWL = "Drop"
+    ExternalWL = "Neighbours"

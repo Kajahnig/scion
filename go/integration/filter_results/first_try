@@ -1,5 +1,0 @@
-//requests for server in AS 120
-1-ff00:0:110    1-ff00:0:120    TRCRequest      whitelist
-1-ff00:0:120    1-ff00:0:120    TRCRequest      pass
-1-ff00:0:110    1-ff00:0:120    ChainRequest    pass
-1-ff00:0:120    1-ff00:0:120    ChainRequest    pathLength

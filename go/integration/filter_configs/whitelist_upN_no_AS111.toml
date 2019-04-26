@@ -1,6 +1,0 @@
-#A whitelist filter with
-#Outside filtering set to only let packets from up- and downstream neighbours pass
-#And local filtering set to the default (no whitelist)
-[whitelist]
-PathToTopoFile = "./gen/ISD1/ASff00_0_111/br1-ff00_0_111-1/topology.json"
-OutsideSetting = "AcceptUpNeighbours"

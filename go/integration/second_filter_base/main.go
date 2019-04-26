@@ -33,6 +33,7 @@ import (
 	"github.com/scionproto/scion/go/lib/infra/disp"
 	"github.com/scionproto/scion/go/lib/infra/messenger"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/filter_handler"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters/whitelisting/whitelist_filters"
 	"github.com/scionproto/scion/go/lib/infra/transport"
 	libint "github.com/scionproto/scion/go/lib/integration"
 	"github.com/scionproto/scion/go/lib/log"
@@ -50,14 +51,14 @@ type Result string
 type RequestType string
 
 const (
-	Pass       Result = "pass"
-	Whitelist  Result = "whitelist"
-	Pathlength Result = "pathLength"
+	Pass      Result = "pass"
+	Whitelist Result = "whitelist"
 )
 
 var (
 	remote         snet.Addr
 	resultFileName string
+	topoFilePath   string
 )
 
 func main() {
@@ -82,6 +83,8 @@ func addFlags() {
 	flag.Var((*snet.Addr)(&remote), "remote", "(Mandatory for clients) address to connect to")
 	flag.StringVar(&resultFileName, "results", "",
 		"(Mandatory for clients) Name of the result file in "+ResultDir)
+	flag.StringVar(&topoFilePath, "topoFilePath", "",
+		"(Mandatory for servers) Path to the topology file of the server")
 }
 
 func validateFlags() {
@@ -140,7 +143,7 @@ func (s server) run() {
 		integration.LogFatal("Error validating the configuration file", "err", err)
 	}
 
-	err = filter_handler.Init(integration.Local.IA, &cfg, "./gen/ISD1/ASff00_0_120/br1-ff00_0_120-1/topology.json")
+	err = filter_handler.Init(integration.Local.IA, &cfg, topoFilePath)
 
 	//add handlers to the messenger
 	msgr.AddHandler(infra.TRCRequest,
@@ -271,11 +274,13 @@ func checkError(answer Result, err error) error {
 			}
 		} else {
 			if t.Message.Err == proto.Ack_ErrCode_reject {
-				return nil
+				if answer == Whitelist && t.Message.ErrDesc == whitelist_filters.ErrMsg {
+					return nil
+				}
 			}
 		}
 		return common.NewBasicError(fmt.Sprintf("Expected %v but got %v",
-			answer, t.Message.Err.String()), nil)
+			answer, t.Message.ErrDesc), nil)
 	}
 	return common.NewBasicError("Expected error of type infra.Error but got", err)
 }
