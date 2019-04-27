@@ -25,7 +25,7 @@ import (
 	"github.com/scionproto/scion/go/lib/addr"
 	"github.com/scionproto/scion/go/lib/infra"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/per_as_rate_limiting"
-	"github.com/scionproto/scion/go/lib/infra/modules/filters/whitelisting/whitelist_filters"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters/whitelisting"
 )
 
 func TestNew(t *testing.T) {
@@ -44,11 +44,11 @@ func TestNew(t *testing.T) {
 			filterhandler := handler.(*FilterHandler)
 			So(filterhandler.originalHandler, ShouldBeNil)
 			So(reflect.TypeOf(filterhandler.internalFilters[0]), ShouldEqual,
-				reflect.TypeOf(&whitelist_filters.InfraNodesFilter{}))
+				reflect.TypeOf(&whitelisting.InfraNodesFilter{}))
 			So(reflect.TypeOf(filterhandler.internalFilters[1]), ShouldEqual,
 				reflect.TypeOf(&per_as_rate_limiting.RateLimitFilter{}))
 			So(reflect.TypeOf(filterhandler.externalFilters[0]), ShouldEqual,
-				reflect.TypeOf(&whitelist_filters.ISDFilter{}))
+				reflect.TypeOf(&whitelisting.ISDFilter{}))
 			So(reflect.TypeOf(filterhandler.externalFilters[1]), ShouldEqual,
 				reflect.TypeOf(&per_as_rate_limiting.RateLimitFilter{}))
 		})
@@ -63,8 +63,8 @@ func Test_newInternalWLFilter(t *testing.T) {
 		filterI := newInternalWLFilter("Infra")
 
 		Convey("Return the correct whitelisting filters", func() {
-			So(reflect.TypeOf(filterD), ShouldEqual, reflect.TypeOf(&whitelist_filters.DroppingFilter{}))
-			So(reflect.TypeOf(filterI), ShouldEqual, reflect.TypeOf(&whitelist_filters.InfraNodesFilter{}))
+			So(reflect.TypeOf(filterD), ShouldEqual, reflect.TypeOf(&whitelisting.DroppingFilter{}))
+			So(reflect.TypeOf(filterI), ShouldEqual, reflect.TypeOf(&whitelisting.InfraNodesFilter{}))
 		})
 
 		filterD2 := newInternalWLFilter("Drop")
@@ -88,12 +88,12 @@ func Test_newExternalWLFilter(t *testing.T) {
 		filterC := newExternalWLFilter("CoreNeighbours")
 
 		Convey("Return the correct whitelisting filters", func() {
-			So(reflect.TypeOf(filterDrop), ShouldEqual, reflect.TypeOf(&whitelist_filters.DroppingFilter{}))
-			So(reflect.TypeOf(filterI), ShouldEqual, reflect.TypeOf(&whitelist_filters.ISDFilter{}))
-			So(reflect.TypeOf(filterN), ShouldEqual, reflect.TypeOf(&whitelist_filters.NeighbourFilter{}))
-			So(reflect.TypeOf(filterU), ShouldEqual, reflect.TypeOf(&whitelist_filters.NeighbourFilter{}))
-			So(reflect.TypeOf(filterD), ShouldEqual, reflect.TypeOf(&whitelist_filters.NeighbourFilter{}))
-			So(reflect.TypeOf(filterC), ShouldEqual, reflect.TypeOf(&whitelist_filters.NeighbourFilter{}))
+			So(reflect.TypeOf(filterDrop), ShouldEqual, reflect.TypeOf(&whitelisting.DroppingFilter{}))
+			So(reflect.TypeOf(filterI), ShouldEqual, reflect.TypeOf(&whitelisting.ISDFilter{}))
+			So(reflect.TypeOf(filterN), ShouldEqual, reflect.TypeOf(&whitelisting.NeighbourFilter{}))
+			So(reflect.TypeOf(filterU), ShouldEqual, reflect.TypeOf(&whitelisting.NeighbourFilter{}))
+			So(reflect.TypeOf(filterD), ShouldEqual, reflect.TypeOf(&whitelisting.NeighbourFilter{}))
+			So(reflect.TypeOf(filterC), ShouldEqual, reflect.TypeOf(&whitelisting.NeighbourFilter{}))
 		})
 
 		Convey("That are all different from each other", func() {

@@ -11,8 +11,18 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+//
+//	There are the following internal whitelisting filters, that filter addresses depending on their IPs (thus the check
+//	that the address is from the local AS should happen before calling the filter):
+//	- The Drop filter returns drop for all addresses
+//	- The Infra Nodes Filter periodically scan the topology file and makes a list of IPs from AS internal
+//	  infrastructure nodes. If an address contains an IP on the list it is accepted otherwise dropped.
+//	- The AS filter (only accept packets from the local AS) is implicit by not setting an internal filter at all
+//	  (and a dropping filter for external traffic)
+//
 
-package whitelist_filters
+package whitelisting
 
 import (
 	"context"
@@ -24,7 +34,6 @@ import (
 	"github.com/scionproto/scion/go/lib/snet"
 )
 
-var _ WLFilter = (*InfraNodesFilter)(nil)
 var _ filters.InternalFilter = (*InfraNodesFilter)(nil)
 
 type InfraNodesFilter struct {
@@ -43,16 +52,6 @@ func NewInfraNodesFilter(pathToTopoFile string, rescanInterval time.Duration) *I
 		rescanInterval)
 
 	return filter
-}
-
-func (f *InfraNodesFilter) FilterAddress(addr snet.SCIONAddress) (filters.FilterResult, error) {
-	f.Lock.RLock()
-	defer f.Lock.RUnlock()
-
-	if _, isPresent := f.InfraNodes[addr.Host.IP().String()]; isPresent {
-		return filters.FilterAccept, nil
-	}
-	return filters.FilterDrop, nil
 }
 
 func (f *InfraNodesFilter) FilterInternal(addr snet.Addr) (filters.FilterResult, error) {

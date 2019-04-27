@@ -37,8 +37,6 @@ func TestFilterHandlerConfig_Sample(t *testing.T) {
 		SoMsg("Vaidation err", err, ShouldBeNil)
 		SoMsg("unparsed", meta.Undecoded(), ShouldBeEmpty)
 
-		fmt.Println(sample.String())
-
 		//Whitelist rescanning
 		SoMsg("Infra WL rescanning interval correct", cfg.WhitelistRescanning.Infra.Duration,
 			ShouldEqual, 10*time.Millisecond)

@@ -19,7 +19,6 @@ import (
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/drkey_filter"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/path_length"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/per_as_rate_limiting"
-	"github.com/scionproto/scion/go/lib/infra/modules/filters/whitelisting"
 )
 
 func CreateFiltersFromConfig(cfg PacketFilterConfig) ([]*filters.PacketFilter, error) {
@@ -27,14 +26,6 @@ func CreateFiltersFromConfig(cfg PacketFilterConfig) ([]*filters.PacketFilter, e
 	var results []*filters.PacketFilter
 	var err error
 
-	if cfg.Whitelist != nil {
-		var filter filters.PacketFilter
-		filter, err = whitelisting.NewWhitelistFilterFromConfig(cfg.Whitelist)
-		if err != nil {
-			return nil, err
-		}
-		results = append(results, &filter)
-	}
 	if cfg.Pathlength != nil {
 		var filter filters.PacketFilter
 		filter, err = path_length.NewPathLengthFilterFromConfig(cfg.Pathlength)

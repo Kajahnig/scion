@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package whitelist_filters
+package whitelisting
 
 import (
 	"testing"
@@ -42,13 +42,13 @@ func TestInfraNodesFilter_FilterPacket(t *testing.T) {
 
 	Convey("An infra nodes filter", t, func() {
 
-		result, err := filter.FilterAddress(externalISDAddr)
+		result, err := filter.FilterInternal(externalISDAddr)
 		Convey("Should accept an (IP) address that is on the infra node whitelist", func() {
 			So(err, ShouldBeNil)
 			So(result, ShouldEqual, filters.FilterAccept)
 		})
 
-		result, err = filter.FilterAddress(localISDAddr)
+		result, err = filter.FilterInternal(localISDAddr)
 		Convey("Should drop an (IP) address that is not on the infra node whitelist", func() {
 			So(err, ShouldBeNil)
 			So(result, ShouldEqual, filters.FilterDrop)

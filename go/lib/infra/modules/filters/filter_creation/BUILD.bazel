@@ -15,7 +15,6 @@ go_library(
         "//go/lib/infra/modules/filters/drkey_filter:go_default_library",
         "//go/lib/infra/modules/filters/path_length:go_default_library",
         "//go/lib/infra/modules/filters/per_as_rate_limiting:go_default_library",
-        "//go/lib/infra/modules/filters/whitelisting:go_default_library",
     ],
 )
 
@@ -31,7 +30,6 @@ go_test(
         "//go/lib/infra/modules/filters/drkey_filter:go_default_library",
         "//go/lib/infra/modules/filters/path_length:go_default_library",
         "//go/lib/infra/modules/filters/per_as_rate_limiting:go_default_library",
-        "//go/lib/infra/modules/filters/whitelisting:go_default_library",
         "@com_github_burntsushi_toml//:go_default_library",
         "@com_github_smartystreets_goconvey//convey:go_default_library",
     ],

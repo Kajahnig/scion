@@ -15,13 +15,13 @@
 package drkey_filter
 
 import (
-	"github.com/scionproto/scion/bazel-scion/external/go_sdk/src/fmt"
-	"github.com/scionproto/scion/go/lib/common"
-	"github.com/scionproto/scion/go/lib/snet"
+	"fmt"
 	"testing"
 
 	. "github.com/smartystreets/goconvey/convey"
 
+	"github.com/scionproto/scion/go/lib/common"
+	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/lib/spse/scmp_auth"
 )
 

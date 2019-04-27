@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package whitelist_filters
+package whitelisting
 
 import (
 	"context"
@@ -24,8 +24,8 @@ import (
 )
 
 const (
-	pathToFile  = "../topology.json"
-	pathToFile1 = "../topology1.json"
+	pathToFile  = "./topology.json"
+	pathToFile1 = "./topology1.json"
 )
 
 // This test uses the topology.json file in the same folder.

@@ -25,7 +25,6 @@ import (
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/drkey_filter"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/path_length"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/per_as_rate_limiting"
-	"github.com/scionproto/scion/go/lib/infra/modules/filters/whitelisting"
 )
 
 func TestCreateFiltersFromConfig(t *testing.T) {
@@ -69,15 +68,13 @@ func TestCreateFiltersFromConfig(t *testing.T) {
 		})
 
 		Convey("Should return a filled filter slice", func() {
-			So(filterSlice, ShouldHaveLength, 4)
+			So(filterSlice, ShouldHaveLength, 3)
 		})
 
 		tests := []struct {
 			typeDescription string
 			filterType      reflect.Type
 		}{
-			{"Whitelist Filter",
-				reflect.TypeOf(&whitelisting.WhitelistFilter{})},
 			{"Path Length Filter",
 				reflect.TypeOf(&path_length.PathLengthFilter{})},
 			{"DRKey Source Auth Filter",

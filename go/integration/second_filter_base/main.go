@@ -33,7 +33,7 @@ import (
 	"github.com/scionproto/scion/go/lib/infra/disp"
 	"github.com/scionproto/scion/go/lib/infra/messenger"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/filter_handler"
-	"github.com/scionproto/scion/go/lib/infra/modules/filters/whitelisting/whitelist_filters"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters/whitelisting"
 	"github.com/scionproto/scion/go/lib/infra/transport"
 	libint "github.com/scionproto/scion/go/lib/integration"
 	"github.com/scionproto/scion/go/lib/log"
@@ -274,7 +274,7 @@ func checkError(answer Result, err error) error {
 			}
 		} else {
 			if t.Message.Err == proto.Ack_ErrCode_reject {
-				if answer == Whitelist && t.Message.ErrDesc == whitelist_filters.ErrMsg {
+				if answer == Whitelist && t.Message.ErrDesc == whitelisting.ErrMsg {
 					return nil
 				}
 			}

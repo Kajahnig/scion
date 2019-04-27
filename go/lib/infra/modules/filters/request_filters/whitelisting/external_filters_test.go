@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package whitelist_filters
+package whitelisting
 
 import (
 	"testing"
@@ -30,8 +30,9 @@ var (
 	otherHostAddr      = addr.HostFromIPStr("127.0.0.251")
 	IAOfLocalISD, _    = addr.IAFromString("1-ff00:0:100")
 	IAOfExternalISD, _ = addr.IAFromString("2-ff00:0:201")
-	localISDAddr       = snet.SCIONAddress{IA: IAOfLocalISD, Host: anyHostAddr}
-	externalISDAddr    = snet.SCIONAddress{IA: IAOfExternalISD, Host: otherHostAddr}
+
+	localISDAddr    = snet.Addr{IA: IAOfLocalISD, Host: &addr.AppAddr{L3: anyHostAddr}}
+	externalISDAddr = snet.Addr{IA: IAOfExternalISD, Host: &addr.AppAddr{L3: otherHostAddr}}
 )
 
 func TestNewNeighbourFilter(t *testing.T) {
@@ -88,13 +89,13 @@ func TestISDFilter_FilterPacket(t *testing.T) {
 
 	Convey("An ISD Filter", t, func() {
 
-		result, err := filter.FilterAddress(localISDAddr)
+		result, err := filter.FilterExternal(localISDAddr)
 		Convey("Should accept an address from the local ISD", func() {
 			So(err, ShouldBeNil)
 			So(result, ShouldEqual, filters.FilterAccept)
 		})
 
-		result, err = filter.FilterAddress(externalISDAddr)
+		result, err = filter.FilterExternal(externalISDAddr)
 		Convey("Should drop an address from any other ISD", func() {
 			So(err, ShouldBeNil)
 			So(result, ShouldEqual, filters.FilterDrop)
@@ -109,13 +110,13 @@ func TestNeighbourFilter_FilterPacket(t *testing.T) {
 
 	Convey("A Neighbour Filter", t, func() {
 
-		result, err := filter.FilterAddress(externalISDAddr)
+		result, err := filter.FilterExternal(externalISDAddr)
 		Convey("Should accept an address that is on the neighbour whitelist", func() {
 			So(err, ShouldBeNil)
 			So(result, ShouldEqual, filters.FilterAccept)
 		})
 
-		result, err = filter.FilterAddress(localISDAddr)
+		result, err = filter.FilterExternal(localISDAddr)
 		Convey("Should drop an address that is not on the neighbour whitelist", func() {
 			So(err, ShouldBeNil)
 			So(result, ShouldEqual, filters.FilterDrop)

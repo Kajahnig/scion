@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package whitelist_filters
+package whitelisting
 
 import (
 	"github.com/scionproto/scion/go/lib/infra/modules/filters"
@@ -21,41 +21,10 @@ import (
 
 const ErrMsg = "Not on whitelist"
 
-type WLFilter interface {
-	FilterAddress(addr snet.SCIONAddress) (filters.FilterResult, error)
-}
-
-var _ WLFilter = (*AcceptingFilter)(nil)
-var _ filters.InternalFilter = (*AcceptingFilter)(nil)
-var _ filters.ExternalFilter = (*AcceptingFilter)(nil)
-
-type AcceptingFilter struct{}
-
-func (f *AcceptingFilter) FilterAddress(addr snet.SCIONAddress) (filters.FilterResult, error) {
-	return filters.FilterAccept, nil
-}
-
-func (f *AcceptingFilter) FilterInternal(addr snet.Addr) (filters.FilterResult, error) {
-	return filters.FilterAccept, nil
-}
-
-func (f *AcceptingFilter) FilterExternal(addr snet.Addr) (filters.FilterResult, error) {
-	return filters.FilterAccept, nil
-}
-
-func (f *AcceptingFilter) ErrorMessage() string {
-	return ErrMsg
-}
-
-var _ WLFilter = (*DroppingFilter)(nil)
 var _ filters.InternalFilter = (*DroppingFilter)(nil)
 var _ filters.ExternalFilter = (*DroppingFilter)(nil)
 
 type DroppingFilter struct{}
-
-func (f *DroppingFilter) FilterAddress(addr snet.SCIONAddress) (filters.FilterResult, error) {
-	return filters.FilterDrop, nil
-}
 
 func (f *DroppingFilter) FilterInternal(addr snet.Addr) (filters.FilterResult, error) {
 	return filters.FilterDrop, nil

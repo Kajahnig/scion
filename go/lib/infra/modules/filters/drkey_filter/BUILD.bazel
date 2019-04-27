@@ -27,7 +27,6 @@ go_test(
     ],
     embed = [":go_default_library"],
     deps = [
-        "//bazel-scion/external/go_sdk/src/fmt:go_default_library",
         "//go/lib/common:go_default_library",
         "//go/lib/snet:go_default_library",
         "//go/lib/spse/scmp_auth:go_default_library",

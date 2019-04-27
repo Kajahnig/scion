@@ -20,7 +20,7 @@ import (
 	"github.com/scionproto/scion/go/lib/infra"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/per_as_rate_limiting"
-	"github.com/scionproto/scion/go/lib/infra/modules/filters/whitelisting/whitelist_filters"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters/whitelisting"
 	"github.com/scionproto/scion/go/lib/log"
 	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/proto"
@@ -32,12 +32,12 @@ var (
 	pathToTopoFile string
 
 	//WL filters
-	infraFilter     *whitelist_filters.InfraNodesFilter
-	isdFilter       *whitelist_filters.ISDFilter
-	neighbourFilter *whitelist_filters.NeighbourFilter
-	upFilter        *whitelist_filters.NeighbourFilter
-	downFilter      *whitelist_filters.NeighbourFilter
-	coreFilter      *whitelist_filters.NeighbourFilter
+	infraFilter     *whitelisting.InfraNodesFilter
+	isdFilter       *whitelisting.ISDFilter
+	neighbourFilter *whitelisting.NeighbourFilter
+	upFilter        *whitelisting.NeighbourFilter
+	downFilter      *whitelisting.NeighbourFilter
+	coreFilter      *whitelisting.NeighbourFilter
 	//Interval request limit filters
 	intIntervalFilter *per_as_rate_limiting.RateLimitFilter
 	extIntervalFilter *per_as_rate_limiting.RateLimitFilter
@@ -135,12 +135,12 @@ func newInternalWLFilter(setting string) filters.InternalFilter {
 	switch setting {
 	case InfraWL:
 		if infraFilter == nil {
-			infraFilter = whitelist_filters.NewInfraNodesFilter(pathToTopoFile,
+			infraFilter = whitelisting.NewInfraNodesFilter(pathToTopoFile,
 				cfg.WhitelistRescanning.Infra.Duration)
 		}
 		return infraFilter
 	default:
-		return &whitelist_filters.DroppingFilter{}
+		return &whitelisting.DroppingFilter{}
 	}
 }
 
@@ -148,35 +148,35 @@ func newExternalWLFilter(setting string) filters.ExternalFilter {
 	switch setting {
 	case ISDWL:
 		if isdFilter == nil {
-			isdFilter = &whitelist_filters.ISDFilter{Isd: localIA.I}
+			isdFilter = &whitelisting.ISDFilter{Isd: localIA.I}
 		}
 		return isdFilter
 	case NeighboursWL:
 		if neighbourFilter == nil {
-			neighbourFilter = whitelist_filters.NewNeighbourFilter(pathToTopoFile,
+			neighbourFilter = whitelisting.NewNeighbourFilter(pathToTopoFile,
 				cfg.WhitelistRescanning.Neighbours.Duration)
 		}
 		return neighbourFilter
 	case UpWL:
 		if upFilter == nil {
-			upFilter = whitelist_filters.NewUpNeighbourFilter(pathToTopoFile,
+			upFilter = whitelisting.NewUpNeighbourFilter(pathToTopoFile,
 				cfg.WhitelistRescanning.Up.Duration)
 		}
 		return upFilter
 	case DownWL:
 		if downFilter == nil {
-			downFilter = whitelist_filters.NewDownNeighbourFilter(pathToTopoFile,
+			downFilter = whitelisting.NewDownNeighbourFilter(pathToTopoFile,
 				cfg.WhitelistRescanning.Down.Duration)
 		}
 		return downFilter
 	case CoreWL:
 		if coreFilter == nil {
-			coreFilter = whitelist_filters.NewCoreNeighbourFilter(pathToTopoFile,
+			coreFilter = whitelisting.NewCoreNeighbourFilter(pathToTopoFile,
 				cfg.WhitelistRescanning.Core.Duration)
 		}
 		return coreFilter
 	default:
-		return &whitelist_filters.DroppingFilter{}
+		return &whitelisting.DroppingFilter{}
 	}
 }
 
