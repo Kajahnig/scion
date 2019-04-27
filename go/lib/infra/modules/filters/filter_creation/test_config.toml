@@ -3,14 +3,3 @@ MinPathLength = 3
 MaxPathLength = 4
 
 [drkey]
-
-[packetRateLimit]
-    [packetRateLimit.LocalConfig]
-    NumOfClients = 10
-    Interval = "30s"
-    MaxCount = 100
-
-    [packetRateLimit.OutsideConfig]
-    NumOfClients = 30
-    MaxCount = 200
-    Interval = "40s"

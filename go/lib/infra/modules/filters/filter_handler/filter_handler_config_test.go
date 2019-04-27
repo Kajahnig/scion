@@ -23,7 +23,7 @@ import (
 	"github.com/BurntSushi/toml"
 	. "github.com/smartystreets/goconvey/convey"
 
-	"github.com/scionproto/scion/go/lib/infra/modules/filters/per_as_rate_limiting"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters/interval_request_limiting"
 )
 
 func TestFilterHandlerConfig_Sample(t *testing.T) {
@@ -59,7 +59,7 @@ func TestFilterHandlerConfig_Sample(t *testing.T) {
 	})
 }
 
-func checkIntervalRequestLimit(location string, config *per_as_rate_limiting.RateLimitConfig) {
+func checkIntervalRequestLimit(location string, config *interval_request_limiting.RateLimitConfig) {
 	SoMsg(fmt.Sprintf("%v Interval RL: Number of clients correct", location), config.NumOfClients,
 		ShouldEqual, 100)
 	SoMsg(fmt.Sprintf("%v Interval RL: Interval correct", location), config.Interval.Duration,

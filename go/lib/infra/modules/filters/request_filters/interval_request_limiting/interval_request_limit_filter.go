@@ -11,8 +11,21 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+//
+// An Interval Request Limit Filter filters according to the number of requests per AS (FilterExternal)
+// or per IP (FilterInternal) that have been seen in a certain time interval.
+// The underlying data structure to approximate the number of sent requests is a Counting Bloom Filter, dimensioned
+// for a false positivity rate of 10% and increasing the counter with the minimum increase algorithm (only increases the
+// counter with the minimum value).
+//
+// The filter can be configured with the following parameters:
+// - number of clients: the number of distinctive ASes or IPS for which requests should be counted
+// - max Value: 		the number of allowed requests, that - when it is reached - results in drop of further requests
+// - interval: 			the time after which the counting bloom filter is reset
+//
 
-package per_as_rate_limiting
+package interval_request_limiting
 
 import (
 	"context"
@@ -26,31 +39,31 @@ import (
 
 const ErrMsg = "Request limit exceeded"
 
-var _ filters.InternalFilter = (*RateLimitFilter)(nil)
-var _ filters.ExternalFilter = (*RateLimitFilter)(nil)
+var _ filters.InternalFilter = (*IntervalRequestLimitFilter)(nil)
+var _ filters.ExternalFilter = (*IntervalRequestLimitFilter)(nil)
 
-type RateLimitFilter struct {
+type IntervalRequestLimitFilter struct {
 	filter      *counting_bloom.CBF
 	numCells    uint32
 	numHashFunc uint32
 	maxValue    uint32
 }
 
-func (f *RateLimitFilter) FilterInternal(addr snet.Addr) (filters.FilterResult, error) {
+func (f *IntervalRequestLimitFilter) FilterInternal(addr snet.Addr) (filters.FilterResult, error) {
 	addrAsBytes := []byte(addr.Host.L3.IP().String())
 	return f.checkLimit(addrAsBytes)
 }
 
-func (f *RateLimitFilter) FilterExternal(addr snet.Addr) (filters.FilterResult, error) {
+func (f *IntervalRequestLimitFilter) FilterExternal(addr snet.Addr) (filters.FilterResult, error) {
 	addrAsBytes := []byte(addr.IA.String())
 	return f.checkLimit(addrAsBytes)
 }
 
-func (f *RateLimitFilter) ErrorMessage() string {
+func (f *IntervalRequestLimitFilter) ErrorMessage() string {
 	return ErrMsg
 }
 
-func (f *RateLimitFilter) checkLimit(addr []byte) (filters.FilterResult, error) {
+func (f *IntervalRequestLimitFilter) checkLimit(addr []byte) (filters.FilterResult, error) {
 	rateLimitExceeded, err := f.filter.CheckIfRateLimitExceeded(addr)
 	if err != nil {
 		return filters.FilterError, err
@@ -61,7 +74,7 @@ func (f *RateLimitFilter) checkLimit(addr []byte) (filters.FilterResult, error) 
 	return filters.FilterAccept, nil
 }
 
-func FilterFromConfig(cfg *RateLimitConfig) (*RateLimitFilter, error) {
+func FilterFromConfig(cfg *RateLimitConfig) (*IntervalRequestLimitFilter, error) {
 	if cfg == nil {
 		return nil, nil
 	}
@@ -74,7 +87,7 @@ func FilterFromConfig(cfg *RateLimitConfig) (*RateLimitFilter, error) {
 		return nil, err
 	}
 
-	filter := &RateLimitFilter{CBF, numCells, numHashFunc, maxValue}
+	filter := &IntervalRequestLimitFilter{CBF, numCells, numHashFunc, maxValue}
 
 	periodic.StartPeriodicTask(
 		&FilterResetter{filter.filter},

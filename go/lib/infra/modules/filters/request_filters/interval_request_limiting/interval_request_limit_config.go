@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package per_as_rate_limiting
+package interval_request_limiting
 
 import (
 	"io"

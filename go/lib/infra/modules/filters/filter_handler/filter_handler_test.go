@@ -24,7 +24,7 @@ import (
 
 	"github.com/scionproto/scion/go/lib/addr"
 	"github.com/scionproto/scion/go/lib/infra"
-	"github.com/scionproto/scion/go/lib/infra/modules/filters/per_as_rate_limiting"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters/interval_request_limiting"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters/whitelisting"
 )
 
@@ -46,11 +46,11 @@ func TestNew(t *testing.T) {
 			So(reflect.TypeOf(filterhandler.internalFilters[0]), ShouldEqual,
 				reflect.TypeOf(&whitelisting.InfraNodesFilter{}))
 			So(reflect.TypeOf(filterhandler.internalFilters[1]), ShouldEqual,
-				reflect.TypeOf(&per_as_rate_limiting.RateLimitFilter{}))
+				reflect.TypeOf(&interval_request_limiting.IntervalRequestLimitFilter{}))
 			So(reflect.TypeOf(filterhandler.externalFilters[0]), ShouldEqual,
 				reflect.TypeOf(&whitelisting.ISDFilter{}))
 			So(reflect.TypeOf(filterhandler.externalFilters[1]), ShouldEqual,
-				reflect.TypeOf(&per_as_rate_limiting.RateLimitFilter{}))
+				reflect.TypeOf(&interval_request_limiting.IntervalRequestLimitFilter{}))
 		})
 	})
 
@@ -129,7 +129,7 @@ func Test_newInternalRLFilter(t *testing.T) {
 		filter := newInternalRLFilter("Interval")
 
 		Convey("Return an interval request limiting filter", func() {
-			So(reflect.TypeOf(filter), ShouldEqual, reflect.TypeOf(&per_as_rate_limiting.RateLimitFilter{}))
+			So(reflect.TypeOf(filter), ShouldEqual, reflect.TypeOf(&interval_request_limiting.IntervalRequestLimitFilter{}))
 		})
 		filter2 := newInternalRLFilter("Interval")
 		Convey("Return the same interval request limiting filter on a second call", func() {
@@ -148,7 +148,7 @@ func Test_newExternalRLFilter(t *testing.T) {
 		filter := newExternalRLFilter("Interval")
 
 		Convey("Return an interval request limiting filter", func() {
-			So(reflect.TypeOf(filter), ShouldEqual, reflect.TypeOf(&per_as_rate_limiting.RateLimitFilter{}))
+			So(reflect.TypeOf(filter), ShouldEqual, reflect.TypeOf(&interval_request_limiting.IntervalRequestLimitFilter{}))
 		})
 		filter2 := newExternalRLFilter("Interval")
 		Convey("Return the same interval request limiting filter on a second call", func() {

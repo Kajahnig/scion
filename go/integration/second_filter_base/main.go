@@ -33,7 +33,7 @@ import (
 	"github.com/scionproto/scion/go/lib/infra/disp"
 	"github.com/scionproto/scion/go/lib/infra/messenger"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/filter_handler"
-	"github.com/scionproto/scion/go/lib/infra/modules/filters/per_as_rate_limiting"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters/interval_request_limiting"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters/whitelisting"
 	"github.com/scionproto/scion/go/lib/infra/transport"
 	libint "github.com/scionproto/scion/go/lib/integration"
@@ -250,7 +250,7 @@ func (c client) requestRepeatedly(rs requestSequence) int {
 		} else if infraErr.Message.Err == proto.Ack_ErrCode_reject {
 			if rs.resultType == Whitelist && infraErr.Error() != whitelisting.ErrMsg {
 				log.Error("Expected whitelisting error but got", err, infraErr)
-			} else if rs.resultType == RequestLimit && infraErr.Error() != per_as_rate_limiting.ErrMsg {
+			} else if rs.resultType == RequestLimit && infraErr.Error() != interval_request_limiting.ErrMsg {
 				log.Error("Expected request limit error but got", err, infraErr)
 			}
 

@@ -21,7 +21,7 @@ import (
 
 	"github.com/scionproto/scion/go/lib/common"
 	"github.com/scionproto/scion/go/lib/config"
-	"github.com/scionproto/scion/go/lib/infra/modules/filters/per_as_rate_limiting"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters/interval_request_limiting"
 )
 
 const whitelistRescanningSample = `
@@ -60,8 +60,8 @@ type FilterHandlerConfig struct {
 		Core       duration
 	}
 	IntervalRequestLimiting struct {
-		Internal *per_as_rate_limiting.RateLimitConfig
-		External *per_as_rate_limiting.RateLimitConfig
+		Internal *interval_request_limiting.RateLimitConfig
+		External *interval_request_limiting.RateLimitConfig
 	}
 
 	RequestConfigs map[string]RequestConfig
@@ -161,8 +161,8 @@ func (cfg FilterHandlerConfig) Sample(dst io.Writer, path config.Path, ctx confi
 			Name: "WhitelistRescanning",
 		},
 		config.StringSampler{
-			Text: intervalRequestLimitingSampleInternal + per_as_rate_limiting.RateLimitSample +
-				intervalRequestLimitingSampleExternal + per_as_rate_limiting.RateLimitSample,
+			Text: intervalRequestLimitingSampleInternal + interval_request_limiting.RateLimitSample +
+				intervalRequestLimitingSampleExternal + interval_request_limiting.RateLimitSample,
 			Name: "IntervalRequestLimiting",
 		},
 		config.StringSampler{

@@ -18,7 +18,6 @@ import (
 	"github.com/scionproto/scion/go/lib/infra/modules/filters"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/drkey_filter"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/path_length"
-	"github.com/scionproto/scion/go/lib/infra/modules/filters/per_as_rate_limiting"
 )
 
 func CreateFiltersFromConfig(cfg PacketFilterConfig) ([]*filters.PacketFilter, error) {
@@ -37,14 +36,6 @@ func CreateFiltersFromConfig(cfg PacketFilterConfig) ([]*filters.PacketFilter, e
 	if cfg.Drkey != nil {
 		var filter filters.PacketFilter
 		filter = &drkey_filter.DRKeyFilter{}
-		results = append(results, &filter)
-	}
-	if cfg.PacketRateLimit != nil {
-		var filter filters.PacketFilter
-		filter, err = per_as_rate_limiting.NewPacketRateLimitingFilterFromConfig(cfg.PacketRateLimit)
-		if err != nil {
-			return nil, err
-		}
 		results = append(results, &filter)
 	}
 	return results, nil

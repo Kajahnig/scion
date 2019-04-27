@@ -19,7 +19,7 @@ import (
 	"github.com/scionproto/scion/go/lib/ctrl/ack"
 	"github.com/scionproto/scion/go/lib/infra"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters"
-	"github.com/scionproto/scion/go/lib/infra/modules/filters/per_as_rate_limiting"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters/interval_request_limiting"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters/whitelisting"
 	"github.com/scionproto/scion/go/lib/log"
 	"github.com/scionproto/scion/go/lib/snet"
@@ -39,8 +39,8 @@ var (
 	downFilter      *whitelisting.NeighbourFilter
 	coreFilter      *whitelisting.NeighbourFilter
 	//Interval request limit filters
-	intIntervalFilter *per_as_rate_limiting.RateLimitFilter
-	extIntervalFilter *per_as_rate_limiting.RateLimitFilter
+	intIntervalFilter *interval_request_limiting.IntervalRequestLimitFilter
+	extIntervalFilter *interval_request_limiting.IntervalRequestLimitFilter
 )
 
 func Init(locIA addr.IA, config *FilterHandlerConfig, path string) error {
@@ -184,7 +184,7 @@ func newInternalRLFilter(setting string) filters.InternalFilter {
 	switch setting {
 	default:
 		if intIntervalFilter == nil {
-			intIntervalFilter, _ = per_as_rate_limiting.FilterFromConfig(cfg.IntervalRequestLimiting.Internal)
+			intIntervalFilter, _ = interval_request_limiting.FilterFromConfig(cfg.IntervalRequestLimiting.Internal)
 		}
 		return intIntervalFilter
 	}
@@ -194,7 +194,7 @@ func newExternalRLFilter(setting string) filters.ExternalFilter {
 	switch setting {
 	default:
 		if extIntervalFilter == nil {
-			extIntervalFilter, _ = per_as_rate_limiting.FilterFromConfig(cfg.IntervalRequestLimiting.External)
+			extIntervalFilter, _ = interval_request_limiting.FilterFromConfig(cfg.IntervalRequestLimiting.External)
 		}
 		return extIntervalFilter
 	}

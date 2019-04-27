@@ -22,15 +22,13 @@ import (
 	"github.com/scionproto/scion/go/lib/config"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/drkey_filter"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/path_length"
-	"github.com/scionproto/scion/go/lib/infra/modules/filters/per_as_rate_limiting"
 )
 
 var _ config.Config = (*PacketFilterConfig)(nil)
 
 type PacketFilterConfig struct {
-	Pathlength      *path_length.PathLengthConfig
-	Drkey           *drkey_filter.DRKeyConfig
-	PacketRateLimit *per_as_rate_limiting.PacketRateLimitConfig
+	Pathlength *path_length.PathLengthConfig
+	Drkey      *drkey_filter.DRKeyConfig
 }
 
 func (cfg *PacketFilterConfig) InitDefaults() {
@@ -39,9 +37,6 @@ func (cfg *PacketFilterConfig) InitDefaults() {
 	}
 	if cfg.Drkey != nil {
 		cfg.Drkey.InitDefaults()
-	}
-	if cfg.PacketRateLimit != nil {
-		cfg.PacketRateLimit.InitDefaults()
 	}
 }
 
@@ -60,13 +55,6 @@ func (cfg *PacketFilterConfig) Validate() error {
 				"type", fmt.Sprintf("%T", cfg.Drkey))
 		}
 	}
-	if cfg.PacketRateLimit != nil {
-		err := cfg.PacketRateLimit.Validate()
-		if err != nil {
-			return common.NewBasicError("Unable to validate", err,
-				"type", fmt.Sprintf("%T", cfg.PacketRateLimit))
-		}
-	}
 	return nil
 }
 
@@ -77,6 +65,5 @@ func (cfg *PacketFilterConfig) ConfigName() string {
 func (cfg *PacketFilterConfig) Sample(dst io.Writer, path config.Path, ctx config.CtxMap) {
 	config.WriteSample(dst, path, ctx,
 		&(path_length.PathLengthConfig{}),
-		&(drkey_filter.DRKeyConfig{}),
-		&(per_as_rate_limiting.PacketRateLimitConfig{}))
+		&(drkey_filter.DRKeyConfig{}))
 }
