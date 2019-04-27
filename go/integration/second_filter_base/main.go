@@ -33,6 +33,7 @@ import (
 	"github.com/scionproto/scion/go/lib/infra/disp"
 	"github.com/scionproto/scion/go/lib/infra/messenger"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/filter_handler"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters/per_as_rate_limiting"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters/whitelisting"
 	"github.com/scionproto/scion/go/lib/infra/transport"
 	libint "github.com/scionproto/scion/go/lib/integration"
@@ -48,11 +49,11 @@ const (
 )
 
 type Result string
-type RequestType string
 
 const (
-	Pass      Result = "pass"
-	Whitelist Result = "whitelist"
+	Pass         Result = "pass"
+	Whitelist    Result = "whitelist"
+	RequestLimit Result = "intervalRL"
 )
 
 var (
@@ -143,6 +144,8 @@ func (s server) run() {
 		integration.LogFatal("Error validating the configuration file", "err", err)
 	}
 
+	log.Debug(fmt.Sprintf("%v", cfg))
+
 	err = filter_handler.Init(integration.Local.IA, &cfg, topoFilePath)
 
 	//add handlers to the messenger
@@ -177,11 +180,12 @@ type client struct {
 	msgr infra.Messenger
 }
 
-type requestSeries struct {
+type requestSequence struct {
 	requestType        infra.MessageType
 	resultType         Result
 	numOfRequests      int
 	maxPassingRequests int
+	changingRequests   bool
 }
 
 func (c client) run() int {
@@ -210,92 +214,137 @@ func (c client) run() int {
 	)
 
 	for _, r := range rs {
-		if c.sendRequestSeries(r) > 0 {
+		if c.requestRepeatedly(r) > 0 {
 			return 1
 		}
 	}
 	return 0
 }
 
-func (c client) sendRequestSeries(rs requestSeries) int {
-	switch rs.requestType {
-	case infra.TRCRequest:
-		err := c.requestTRC(rs.resultType)
-		if err != nil {
-			log.Info("Error in TRC request", "err", err)
+func (c client) requestRepeatedly(rs requestSequence) int {
+	var counter = 0
+	var expectingError = false
+	trc := rs.requestType == infra.TRCRequest
+	for i := 0; i < rs.numOfRequests; i++ {
+		var err error
+		if trc {
+			err = c.requestTRC()
+		} else {
+			err = c.requestCert()
+		}
+
+		infraErr, ok := err.(*infra.Error)
+		if !ok {
+			log.Error(fmt.Sprintf("Error sending TRC request: Expected error of type infra.Error but got %t", err))
 			return 1
 		}
-		return 0
-	case infra.ChainRequest:
-		err := c.requestCert(rs.resultType)
-		if err != nil {
-			log.Info("Error in TRC request", "err", err)
+
+		if infraErr.Message.Err == proto.Ack_ErrCode_ok {
+			if !expectingError {
+				counter++
+			} else {
+				log.Debug(fmt.Sprintf("Received %v errors of type %v from %s", counter, rs.resultType, remote.IA))
+				expectingError = !expectingError
+				counter = 1
+			}
+		} else if infraErr.Message.Err == proto.Ack_ErrCode_reject {
+			if rs.resultType == Whitelist && infraErr.Error() != whitelisting.ErrMsg {
+				log.Error("Expected whitelisting error but got", err, infraErr)
+			} else if rs.resultType == RequestLimit && infraErr.Error() != per_as_rate_limiting.ErrMsg {
+				log.Error("Expected request limit error but got", err, infraErr)
+			}
+
+			if expectingError {
+				counter++
+			} else {
+				if limitViolated(counter, rs.maxPassingRequests) {
+					return 1
+				}
+				expectingError = !expectingError
+				counter = 1
+			}
+		} else {
+			log.Error("Expected error of type ack or reject but got", "type", infraErr.Message.Err)
 			return 1
 		}
+		if rs.changingRequests {
+			trc = !trc
+		}
+	}
+
+	if rs.numOfRequests == rs.maxPassingRequests {
+		if counter < rs.maxPassingRequests-1 {
+			log.Error("All requests for this client should have passed")
+			return 1
+		}
+		log.Debug(fmt.Sprintf("Received %v ok(s) from %s - (no limit)", counter, remote.IA))
+		log.Debug(fmt.Sprintf("Successfully sent %v requests", rs.numOfRequests))
 		return 0
 	}
-	return 1
+
+	if expectingError {
+		log.Debug(fmt.Sprintf("Received %v errors of type %v from %s", counter, rs.resultType, remote.IA))
+		if rs.numOfRequests > 1 && counter == rs.numOfRequests-1 {
+			log.Error("All requests were rejected")
+			return 1
+		}
+	} else if limitViolated(counter, rs.maxPassingRequests) {
+		return 1
+	}
+
+	log.Debug(fmt.Sprintf("Successfully sent %v requests", rs.numOfRequests))
+	return 0
 }
 
-func (c client) requestTRC(answerType Result) error {
+func (c client) requestTRC() error {
 	req := &cert_mgmt.TRCReq{
 		CacheOnly: false,
 		ISD:       remote.IA.I,
 		Version:   scrypto.LatestVer,
 	}
-	log.Info("Request to Server: TRC request", "remote", remote.IA)
+	//log.Info("Request to Server: TRC request", "remote", remote.IA)
 	ctx, cancelF := context.WithTimeout(context.Background(), integration.DefaultIOTimeout)
 	defer cancelF()
 
 	_, err := c.msgr.GetTRC(ctx, req, &remote, messenger.NextId())
-	return checkError(answerType, err)
+	return err
 }
 
-func (c client) requestCert(answerType Result) error {
+func (c client) requestCert() error {
 	req := &cert_mgmt.ChainReq{
 		CacheOnly: false,
 		RawIA:     remote.IA.IAInt(),
 		Version:   scrypto.LatestVer,
 	}
-	log.Info("Request to Server: Chain request", "remote", remote.IA)
+	//log.Info("Request to Server: Chain request", "remote", remote.IA)
 	ctx, cancelF := context.WithTimeout(context.Background(), integration.DefaultIOTimeout)
 	defer cancelF()
 
 	_, err := c.msgr.GetCertChain(ctx, req, &remote, messenger.NextId())
-	return checkError(answerType, err)
+	return err
 }
 
-func checkError(answer Result, err error) error {
-	switch t := err.(type) {
-	case *infra.Error:
-		if answer == Pass {
-			if t.Message.Err == proto.Ack_ErrCode_ok {
-				return nil
-			}
-		} else {
-			if t.Message.Err == proto.Ack_ErrCode_reject {
-				if answer == Whitelist && t.Message.ErrDesc == whitelisting.ErrMsg {
-					return nil
-				}
-			}
-		}
-		return common.NewBasicError(fmt.Sprintf("Expected %v but got %v",
-			answer, t.Message.ErrDesc), nil)
+func limitViolated(counter, maxRequests int) bool {
+	if counter > maxRequests {
+		log.Error(fmt.Sprintf("Received %v ok messages from %s, which is over the limit (%v)",
+			counter, remote.IA, maxRequests))
+		return true
 	}
-	return common.NewBasicError("Expected error of type infra.Error but got", err)
+	log.Debug(fmt.Sprintf("Received %v ok(s) from %s - (limit %v)", counter, remote.IA, maxRequests))
+	return false
 }
 
-func getRequestSequences() ([]requestSeries, error) {
+func getRequestSequences() ([]requestSequence, error) {
 	configFile, err := os.Open(ResultDir + "/" + resultFileName)
 	if err != nil {
-		return []requestSeries{}, err
+		return []requestSequence{}, err
 	}
 	defer configFile.Close()
 
 	localIAString := integration.Local.IA.String()
 	remoteIAString := remote.IA.String()
 
-	var result []requestSeries
+	var result []requestSequence
 
 	scanner := bufio.NewScanner(configFile)
 	for scanner.Scan() {
@@ -305,25 +354,29 @@ func getRequestSequences() ([]requestSeries, error) {
 		} else if resultParams[0] == localIAString && resultParams[1] == remoteIAString {
 			rs, err := parseResultInfo(resultParams[2:])
 			if err != nil {
-				return []requestSeries{}, err
+				return []requestSequence{}, err
 			}
 			result = append(result, rs)
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return []requestSeries{}, err
+		return []requestSequence{}, err
 	}
 	if len(result) == 0 {
-		return []requestSeries{}, common.NewBasicError(
+		return []requestSequence{}, common.NewBasicError(
 			fmt.Sprintf("Did not find a result type for local IA %v and remote IA %v",
 				localIAString, remoteIAString), nil)
 	}
 	return result, nil
 }
 
-func parseResultInfo(resultParams []string) (requestSeries, error) {
+func parseResultInfo(resultParams []string) (requestSequence, error) {
 	var requestType infra.MessageType
-	if resultParams[0] == infra.TRCRequest.String() {
+	changingRequests := false
+	if resultParams[0] == "Changing" {
+		changingRequests = true
+		requestType = infra.TRCRequest
+	} else if resultParams[0] == infra.TRCRequest.String() {
 		requestType = infra.TRCRequest
 	} else if resultParams[0] == infra.ChainRequest.String() {
 		requestType = infra.ChainRequest
@@ -333,6 +386,9 @@ func parseResultInfo(resultParams []string) (requestSeries, error) {
 	result := Result(resultParams[1])
 	var numOfRequests = 1
 	var numOfSuccessfulRequests = 0
+	if result == Pass {
+		numOfSuccessfulRequests = 1
+	}
 	var err error
 
 	if len(resultParams) > 2 {
@@ -350,63 +406,7 @@ func parseResultInfo(resultParams []string) (requestSeries, error) {
 			}
 		}
 	}
-	return requestSeries{requestType, result,
-		numOfRequests, numOfSuccessfulRequests}, err
+
+	return requestSequence{requestType, result,
+		numOfRequests, numOfSuccessfulRequests, changingRequests}, err
 }
-
-/*func (c client) AttemptRepeatedly() int {
-	var counter = 0
-	var expectingError = false
-	for i := 0; i < c.numOfRequests; i++ {
-		if err := c.ping(); err != nil {
-			log.Error("Could not send packet", "err", err)
-			return 1
-		}
-		receivedError, err := c.pong(i)
-		if err != nil {
-			log.Debug(fmt.Sprintf("Error receiving pong %v", i), "err", err)
-			return 1
-		}
-
-		if receivedError == expectingError {
-			counter++
-		} else {
-			if c.limitViolated(expectingError, counter) {
-				return 1
-			}
-			expectingError = !expectingError
-			counter = 1
-		}
-	}
-
-	if c.limitViolated(expectingError, counter) {
-		return 1
-	}
-	if expectingError && c.numOfRequests > 1 && counter == c.numOfRequests-1 {
-		log.Error("All requests were rejected")
-		return 1
-	}
-	if c.numOfRequests == c.maxPassingRequests && counter < c.maxPassingRequests-1 {
-		log.Error("All requests for this client should have passed")
-		return 1
-	}
-	log.Debug(fmt.Sprintf("Successfully sent %v requests", c.numOfRequests))
-	return 0
-}*/
-
-/*func (c client) limitViolated(expectingError bool, counter int) bool {
-	if expectingError { //means we expected an error but did not get one
-		log.Debug(fmt.Sprintf("Received %v errors of type %v from %s",
-			counter, c.resultType.Name(scmp.C_Filtering), remote.IA))
-
-	} else { //means we did not expect an error but we got one
-		if counter > c.maxPassingRequests {
-			log.Error(fmt.Sprintf("Received %v pong messages, which is over the limit (%v)",
-				counter, c.maxPassingRequests))
-			return true
-		}
-		log.Debug(fmt.Sprintf("Received %v pong(s) from %s - (limit %v)",
-			counter, remote.IA, c.maxPassingRequests))
-	}
-	return false
-}*/

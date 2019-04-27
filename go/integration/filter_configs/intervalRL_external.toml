@@ -1,0 +1,12 @@
+[IntervalRequestLimiting]
+    [IntervalRequestLimiting.External]
+    NumOfClients = 16
+    Interval = "5s"
+    MaxCount = 100
+
+[RequestConfigs]
+    [RequestConfigs.TRCRequest]
+    ExternalRateLimit = "Interval"
+
+    [RequestConfigs.ChainRequest]
+    ExternalRateLimit = "Interval"

@@ -1,0 +1,12 @@
+[IntervalRequestLimiting]
+    [IntervalRequestLimiting.Internal]
+    NumOfClients = 1
+    Interval = "400ms"
+    MaxCount = 270
+
+[RequestConfigs]
+    [RequestConfigs.TRCRequest]
+    InternalRateLimit = "Interval"
+
+    [RequestConfigs.ChainRequest]
+    InternalRateLimit = "Interval"

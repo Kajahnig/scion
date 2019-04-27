@@ -1,0 +1,19 @@
+[IntervalRequestLimiting]
+    [IntervalRequestLimiting.Internal]
+    NumOfClients = 1
+    Interval = "1s"
+    MaxCount = 90
+
+    [IntervalRequestLimiting.External]
+    NumOfClients = 8
+    Interval = "1s"
+    MaxCount = 50
+
+[RequestConfigs]
+    [RequestConfigs.TRCRequest]
+    InternalRateLimit = "Interval"
+    ExternalRateLimit = "Interval"
+
+    [RequestConfigs.ChainRequest]
+    InternalRateLimit = "Interval"
+    ExternalRateLimit = "Interval"

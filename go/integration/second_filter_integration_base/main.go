@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"time"
 
 	"github.com/scionproto/scion/go/lib/common"
 	"github.com/scionproto/scion/go/lib/integration"
@@ -81,7 +80,7 @@ func runTests(in integration.Integration, pairs []integration.IAPair) error {
 			defer s.Close()
 		}
 		// Now start the clients for srcDest pair in parallel
-		timeout := integration.DefaultRunTimeout + integration.CtxTimeout*time.Duration(*attempts)
+		timeout := integration.DefaultRunTimeout + 5*integration.CtxTimeout
 		return integration.RunUnaryTestsWithMoreGoRoutines(in, pairs, timeout, *maxNumberOfGoRoutines)
 	})
 }

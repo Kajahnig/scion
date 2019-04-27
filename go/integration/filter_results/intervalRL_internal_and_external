@@ -1,0 +1,14 @@
+//results for the default topology with the config filter_configs/intervalRL_internal_and_external
+//client        server          request         result         req.to send, req.limit
+1-ff00:0:111    1-ff00:0:111    TRCRequest      intervalRL     1000,90
+1-ff00:0:112    1-ff00:0:111    TRCRequest      intervalRL     300,50
+1-ff00:0:120    1-ff00:0:111    TRCRequest      intervalRL     300,50
+1-ff00:0:121    1-ff00:0:111    TRCRequest      intervalRL     300,50
+1-ff00:0:130    1-ff00:0:111    TRCRequest      intervalRL     300,50
+2-ff00:0:211    1-ff00:0:111    TRCRequest      intervalRL     300,50
+1-ff00:0:110    1-ff00:0:120    TRCRequest      intervalRL     300,50
+1-ff00:0:111    1-ff00:0:120    TRCRequest      intervalRL     300,50
+1-ff00:0:120    1-ff00:0:120    TRCRequest      intervalRL     1000,90
+1-ff00:0:121    1-ff00:0:120    TRCRequest      intervalRL     300,50
+1-ff00:0:130    1-ff00:0:120    TRCRequest      intervalRL     300,50
+2-ff00:0:220    1-ff00:0:120    TRCRequest      intervalRL     300,50

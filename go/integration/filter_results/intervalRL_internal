@@ -1,0 +1,6 @@
+//results for the default topology with the config filter_configs/intervalRL_internal
+//client        server          request         result          req.to send, req.limit
+1-ff00:0:111    1-ff00:0:111    Changing        intervalRL      700,270
+1-ff00:0:111    1-ff00:0:120    Changing        pass            500,500
+1-ff00:0:120    1-ff00:0:111    Changing        pass            500,500
+1-ff00:0:120    1-ff00:0:120    Changing        intervalRL      700,270

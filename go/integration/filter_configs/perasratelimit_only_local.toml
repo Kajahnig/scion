@@ -1,6 +1,0 @@
-#A per AS rate limit filter for local traffic
-[packetRateLimit]
-    [packetRateLimit.LocalConfig]
-    NumOfClients = 1
-    Interval = "1s"
-    MaxCount = 300

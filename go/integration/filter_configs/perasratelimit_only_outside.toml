@@ -1,6 +1,0 @@
-#A per AS rate limit filter for outside traffic
-[packetRateLimit]
-    [packetRateLimit.OutsideConfig]
-    NumOfClients = 16
-    Interval = "1s"
-    MaxCount = 100

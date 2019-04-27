@@ -3,12 +3,12 @@ load("@io_bazel_rules_go//go:def.bzl", "go_binary", "go_library")
 go_library(
     name = "go_default_library",
     srcs = ["main.go"],
-    importpath = "github.com/scionproto/scion/go/integration/perasratelimit_filter_integration",
+    importpath = "github.com/scionproto/scion/go/integration/intervalRL_filter_integration",
     visibility = ["//visibility:private"],
 )
 
 go_binary(
-    name = "perasratelimit_filter_integration",
+    name = "intervalRL_filter_integration",
     embed = [":go_default_library"],
     visibility = ["//visibility:public"],
 )
