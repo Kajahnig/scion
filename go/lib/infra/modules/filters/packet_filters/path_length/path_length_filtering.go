@@ -11,6 +11,19 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+//
+// A path length filter filters packets according to their path length. It has the following settings:
+// - allowEmptyPaths: if set allows packets without a path, thus from the local AS
+// - disallowPaths:   if set disallows packets with a path, thus disallows packets from outside of the local AS
+// - minPathLength:   (>1 if set) the minimum length a path must have (if a path is present)
+// - maxPathLength:   (if zero it means the max is not set) the maximum length a path can have (if a path is present)
+//
+// example configurations are (not mentioned settings are set to the default value)
+// only allow local traffic: allowEmptyPaths = true, disallowPaths = true
+// only allow external traffic: minPathLength = 1
+// only allow traffic from local AS and neighbours: allowEmptyPaths = true, minPathLength = 1, maxPathLength = 1
+//
 
 package path_length
 
@@ -25,8 +38,10 @@ import (
 var _ filters.PacketFilter = (*PathLengthFilter)(nil)
 
 type PathLengthFilter struct {
-	minPathLength int
-	maxPathLength int
+	allowEmptyPaths bool
+	disallowPaths   bool
+	minPathLength   int
+	maxPathLength   int
 }
 
 func NewPathLengthFilterFromConfig(cfg *PathLengthConfig) (*PathLengthFilter, error) {
@@ -35,8 +50,10 @@ func NewPathLengthFilterFromConfig(cfg *PathLengthConfig) (*PathLengthFilter, er
 		return nil, err
 	}
 	return &PathLengthFilter{
-		minPathLength: cfg.MinPathLength,
-		maxPathLength: cfg.MaxPathLength,
+		allowEmptyPaths: cfg.AllowEmptyPaths,
+		disallowPaths:   cfg.DisallowPaths,
+		minPathLength:   cfg.MinPathLength,
+		maxPathLength:   cfg.MaxPathLength,
 	}, nil
 }
 
@@ -49,25 +66,28 @@ func (f *PathLengthFilter) SCMPError() scmp.ClassType {
 
 func (f *PathLengthFilter) FilterPacket(pkt *snet.SCIONPacket) (filters.FilterResult, error) {
 	path := pkt.SCIONPacketInfo.Path
-	pathLength, err := f.determinePathLength(path)
+	if path.IsEmpty() {
+		if f.allowEmptyPaths {
+			return filters.FilterAccept, nil
+		}
+		return filters.FilterDrop, nil
+	}
+	if f.disallowPaths {
+		return filters.FilterDrop, nil
+	}
 
+	pathLength, err := determinePathLength(path)
 	if err != nil {
 		return filters.FilterError, err
 	}
 
-	if pathLength > f.maxPathLength || pathLength < f.minPathLength {
+	if pathLength < f.minPathLength || (f.maxPathLength != 0 && pathLength > f.maxPathLength) {
 		return filters.FilterDrop, nil
 	}
-
 	return filters.FilterAccept, nil
 }
 
-func (f *PathLengthFilter) determinePathLength(path *spath.Path) (int, error) {
-
-	if path.IsEmpty() {
-		return 0, nil
-	}
-
+func determinePathLength(path *spath.Path) (int, error) {
 	var offset = 0
 	var pathLength = 0
 
@@ -79,8 +99,8 @@ func (f *PathLengthFilter) determinePathLength(path *spath.Path) (int, error) {
 		segLen := spath.InfoFieldLength + int(infoField.Hops)*spath.HopFieldLength
 		endOfSegment := offset + segLen
 		if endOfSegment > len(path.Raw) {
-			return -1, common.NewBasicError("Unable to determine length of corrupt path", nil,
-				"currOff", offset, "max", len(path.Raw))
+			return -1, common.NewBasicError("Unable to determine length of corrupt path",
+				nil, "currOff", offset, "max", len(path.Raw))
 		}
 		hopFieldCounter := 0
 		firstXover := true

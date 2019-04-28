@@ -23,7 +23,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/packet_filters/drkey_filter"
-	"github.com/scionproto/scion/go/lib/infra/modules/filters/path_length"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters/packet_filters/path_length"
 )
 
 func TestCreateFiltersFromConfig(t *testing.T) {
@@ -59,6 +59,11 @@ func TestCreateFiltersFromConfig(t *testing.T) {
 		})
 
 		cfg.InitDefaults()
+		validErr := cfg.Validate()
+
+		Convey("Should not return a validation error", func() {
+			So(validErr, ShouldBeNil)
+		})
 
 		filterSlice, err := CreateFiltersFromConfig(cfg)
 

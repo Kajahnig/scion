@@ -30,14 +30,20 @@ func TestNewPathLengthFilterFromConfig(t *testing.T) {
 
 	Convey("Creating a new filter from a config", t, func() {
 
-		filter, err := NewPathLengthFilterFromConfig(&PathLengthConfig{-1, 2})
+		filter, err := NewPathLengthFilterFromConfig(
+			&PathLengthConfig{
+				MinPathLength: -1,
+				MaxPathLength: 2})
 
 		Convey("Should return an error for an invalid config and a nil for the filter", func() {
 			So(err, ShouldNotBeNil)
 			So(filter, ShouldBeNil)
 		})
 
-		filter, err = NewPathLengthFilterFromConfig(&PathLengthConfig{5, 10})
+		filter, err = NewPathLengthFilterFromConfig(
+			&PathLengthConfig{
+				MinPathLength: 5,
+				MaxPathLength: 10})
 
 		Convey("Should set the correct path lengths", func() {
 			So(filter.minPathLength, ShouldEqual, 5)
@@ -113,12 +119,10 @@ func Test_determinePathLength(t *testing.T) {
 
 	Convey("Determining the path length of a path", t, func() {
 
-		filter := &PathLengthFilter{0, 0}
-
 		for _, c := range pathLengthTests {
 			path := mkPathRevCase(c.in)
 			Convey(fmt.Sprintf("With %v, path: %v\n", c.numberOfSegments, c.in), func() {
-				pathLength, err := filter.determinePathLength(path)
+				pathLength, err := determinePathLength(path)
 
 				Convey("Should not return an error\n", func() {
 					So(err, ShouldBeNil)
@@ -130,44 +134,94 @@ func Test_determinePathLength(t *testing.T) {
 			})
 		}
 	})
+
+	Convey("Determining the path length of a path without hop fields", t, func() {
+
+		pathLength, err := determinePathLength(pathWith0HopFields)
+
+		Convey("Should not return an error\n", func() {
+			So(err, ShouldBeNil)
+		})
+
+		Convey("Should not return true for is empty", func() {
+			So(pathWith0HopFields.IsEmpty(), ShouldBeFalse)
+		})
+
+		Convey("Should return the path length -1", func() {
+			So(pathLength, ShouldEqual, -1)
+		})
+	})
+
+	Convey("Determining the path length of a path with one hop field", t, func() {
+
+		pathLength, err := determinePathLength(pathWith1HopField)
+
+		Convey("Should not return an error\n", func() {
+			So(err, ShouldBeNil)
+		})
+
+		Convey("Should not return true for is empty", func() {
+			So(pathWith1HopField.IsEmpty(), ShouldBeFalse)
+		})
+
+		Convey("Should return the path length 0", func() {
+			So(pathLength, ShouldEqual, 0)
+		})
+	})
 }
 
+var pathWith0HopFields = mkPathRevCase([]pathCase{{[]uint8{}, false, false}})
+var pathWith1HopField = mkPathRevCase([]pathCase{{[]uint8{1}, false, false}})
 var pathOfLength2 = mkPathRevCase([]pathCase{{[]uint8{1, 2, 3}, false, false}})
 var pathOfLength5 = mkPathRevCase([]pathCase{{[]uint8{1, 2, 3, 4, 5, 6}, false, false}})
 
 var pathFilteringSettings = []struct {
-	minPathLength int
-	maxPathLength int
+	allowEmptyPath bool
+	disallowPath   bool
+	minPathLength  int
+	maxPathLength  int
 }{
-	{0, 0},
-	{0, 1},
-	{1, 5},
-	{6, 7},
+	{true, true, 0, 0},
+	{false, false, 1, 0},
+	{false, false, 1, 4},
+	{true, false, 5, 7},
 }
 
 var pathFilteringTests = []struct {
-	path       *spath.Path
-	pathLength int
-	results    []filters.FilterResult
+	path        *spath.Path
+	description string
+	results     []filters.FilterResult
 }{
-	{nil, 0,
+	{nil, "an empty path",
 		[]filters.FilterResult{
 			filters.FilterAccept,
-			filters.FilterAccept,
-			filters.FilterDrop,
-			filters.FilterDrop}},
-	{pathOfLength2, 2,
-		[]filters.FilterResult{
 			filters.FilterDrop,
 			filters.FilterDrop,
-			filters.FilterAccept,
-			filters.FilterDrop}},
-	{pathOfLength5, 5,
+			filters.FilterAccept}},
+	{pathWith0HopFields, "a non-empty path with 0 hop fields",
 		[]filters.FilterResult{
 			filters.FilterDrop,
 			filters.FilterDrop,
+			filters.FilterDrop,
+			filters.FilterDrop}},
+	{pathWith1HopField, "a non-empty path with 1 hop field",
+		[]filters.FilterResult{
+			filters.FilterDrop,
+			filters.FilterDrop,
+			filters.FilterDrop,
+			filters.FilterDrop}},
+	{pathOfLength2, "a path of length 2",
+		[]filters.FilterResult{
+			filters.FilterDrop,
+			filters.FilterAccept,
 			filters.FilterAccept,
 			filters.FilterDrop}},
+	{pathOfLength5, "a path of length 5",
+		[]filters.FilterResult{
+			filters.FilterDrop,
+			filters.FilterAccept,
+			filters.FilterDrop,
+			filters.FilterAccept}},
 }
 
 func Test_FilterPacket(t *testing.T) {
@@ -177,7 +231,9 @@ func Test_FilterPacket(t *testing.T) {
 		Convey(fmt.Sprintf("Creating a path length filter with min path length %v and max path length %v",
 			filterSettings.minPathLength, filterSettings.maxPathLength), t, func() {
 
-			filter := &PathLengthFilter{filterSettings.minPathLength, filterSettings.maxPathLength}
+			filter := &PathLengthFilter{
+				filterSettings.allowEmptyPath, filterSettings.disallowPath,
+				filterSettings.minPathLength, filterSettings.maxPathLength}
 
 			for _, test := range pathFilteringTests {
 
@@ -190,8 +246,8 @@ func Test_FilterPacket(t *testing.T) {
 
 				result, _ := filter.FilterPacket(packet)
 
-				Convey(fmt.Sprintf("Filtering a path of length %v, should result in %v",
-					test.pathLength, test.results[i].ToString()), func() {
+				Convey(fmt.Sprintf("Filtering %v, should result in %v",
+					test.description, test.results[i].ToString()), func() {
 					So(result, ShouldResemble, test.results[i])
 				})
 			}

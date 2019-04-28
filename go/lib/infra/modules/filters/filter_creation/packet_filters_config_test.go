@@ -23,7 +23,7 @@ import (
 
 	"github.com/scionproto/scion/go/lib/config"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/packet_filters/drkey_filter"
-	"github.com/scionproto/scion/go/lib/infra/modules/filters/path_length"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters/packet_filters/path_length"
 )
 
 func TestPacketFilterConfig(t *testing.T) {
@@ -37,9 +37,12 @@ func TestPacketFilterConfig(t *testing.T) {
 		SoMsg("validation err", validationErr, ShouldBeNil)
 		SoMsg("unparsed", meta.Undecoded(), ShouldBeEmpty)
 
+		SoMsg("AllowEmptyPaths correct", cfg.Pathlength.AllowEmptyPaths, ShouldBeTrue)
+		SoMsg("DisallowPaths correct", cfg.Pathlength.DisallowPaths, ShouldBeFalse)
 		SoMsg("MinPathlength correct", cfg.Pathlength.MinPathLength, ShouldEqual, 1)
 		SoMsg("MaxPathLength correct", cfg.Pathlength.MaxPathLength, ShouldEqual, 2)
-		SoMsg("DRkey present", cfg.Drkey, ShouldNotBeNil)
+		SoMsg("DRkey internal correct", cfg.Drkey.InternalFiltering, ShouldBeTrue)
+		SoMsg("DRkey external correct", cfg.Drkey.ExternalFiltering, ShouldBeFalse)
 	})
 
 	Convey("Sample with only path length filter correct", t, func() {

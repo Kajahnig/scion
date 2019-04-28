@@ -1,6 +1,8 @@
 [pathlength]
-MinPathLength = 3
-MaxPathLength = 4
+AllowEmptyPaths = true
+DisallowPaths = false
+MinPathLength = 1
+MaxPathLength = 1
 
 [drkey]
 InternalFiltering = false

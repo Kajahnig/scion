@@ -32,6 +32,8 @@ func TestPathLengthConfig_Sample(t *testing.T) {
 		SoMsg("err", err, ShouldBeNil)
 		SoMsg("unparsed", meta.Undecoded(), ShouldBeEmpty)
 
+		SoMsg("AllowEmptyPaths correct", cfg.AllowEmptyPaths, ShouldBeTrue)
+		SoMsg("DisallowPaths correct", cfg.DisallowPaths, ShouldBeFalse)
 		SoMsg("MinPathlength correct", cfg.MinPathLength, ShouldEqual, 1)
 		SoMsg("MaxPathLength correct", cfg.MaxPathLength, ShouldEqual, 2)
 	})
@@ -40,24 +42,51 @@ func TestPathLengthConfig_Sample(t *testing.T) {
 func TestPathLengthConfig_Validate(t *testing.T) {
 	Convey("Validation of a config should fail if", t, func() {
 
+		Convey("Empty Paths not allowed and any paths disallowed", func() {
+			err := makeConfig(false, true, 1, 4).Validate()
+			So(err, ShouldNotBeNil)
+		})
+		Convey("Any paths disallowed and min path not zero", func() {
+			err := makeConfig(true, true, 1, 0).Validate()
+			So(err, ShouldNotBeNil)
+		})
+		Convey("Any paths disallowed and max path not zero", func() {
+			err := makeConfig(true, true, 0, 4).Validate()
+			So(err, ShouldNotBeNil)
+		})
+
 		Convey("Min Path length below 0", func() {
-			err := makeConfig(-1, 4).Validate()
+			err := makeConfig(false, false, -1, 4).Validate()
 			So(err, ShouldNotBeNil)
 		})
 		Convey("Max Path length below 0", func() {
-			err := makeConfig(1, -3).Validate()
+			err := makeConfig(false, false, 1, -3).Validate()
 			So(err, ShouldNotBeNil)
 		})
 		Convey("Max Path length smaller than min path length", func() {
-			err := makeConfig(5, 4).Validate()
+			err := makeConfig(false, false, 5, 4).Validate()
 			So(err, ShouldNotBeNil)
+		})
+		Convey("Min Path length is zero", func() {
+			err := makeConfig(true, false, 0, 4).Validate()
+			So(err, ShouldNotBeNil)
+		})
+	})
+
+	Convey("Validation of a config should not fail if", t, func() {
+
+		Convey("If max path is smaller than min path length but zero", func() {
+			err := makeConfig(false, false, 1, 0).Validate()
+			So(err, ShouldBeNil)
 		})
 	})
 }
 
-func makeConfig(min, max int) *PathLengthConfig {
+func makeConfig(allowEmpty, disallowAny bool, min, max int) *PathLengthConfig {
 	return &PathLengthConfig{
-		MinPathLength: min,
-		MaxPathLength: max,
+		AllowEmptyPaths: allowEmpty,
+		DisallowPaths:   disallowAny,
+		MinPathLength:   min,
+		MaxPathLength:   max,
 	}
 }
