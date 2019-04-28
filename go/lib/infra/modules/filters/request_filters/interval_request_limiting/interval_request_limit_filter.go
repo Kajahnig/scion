@@ -32,7 +32,7 @@ import (
 	"math"
 
 	"github.com/scionproto/scion/go/lib/infra/modules/filters"
-	"github.com/scionproto/scion/go/lib/infra/modules/filters/counting_bloom"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters/counting_bloom"
 	"github.com/scionproto/scion/go/lib/periodic"
 	"github.com/scionproto/scion/go/lib/snet"
 )

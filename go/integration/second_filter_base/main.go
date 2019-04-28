@@ -32,7 +32,7 @@ import (
 	"github.com/scionproto/scion/go/lib/infra"
 	"github.com/scionproto/scion/go/lib/infra/disp"
 	"github.com/scionproto/scion/go/lib/infra/messenger"
-	"github.com/scionproto/scion/go/lib/infra/modules/filters/filter_handler"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters/filter_handler"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters/interval_request_limiting"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters/whitelisting"
 	"github.com/scionproto/scion/go/lib/infra/transport"
