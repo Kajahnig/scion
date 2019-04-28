@@ -1,3 +1,0 @@
-#A path length filter with default min path length 0 and max 1
-[pathlength]
-MaxPathLength = 1

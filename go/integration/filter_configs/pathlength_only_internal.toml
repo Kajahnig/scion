@@ -1,0 +1,4 @@
+#A path length filter that only allows local traffic
+[pathlength]
+AllowEmptyPaths = true
+DisallowPaths = true

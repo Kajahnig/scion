@@ -21,7 +21,8 @@ import (
 
 var (
 	cmd                 = "./bin/filter_integration_base"
-	configAndResultName = []string{"pathlength_min0_max0", "pathlength_min0_max1", "pathlength_min0_max2",
+	configAndResultName = []string{"pathlength_only_internal", "pathlength_only_external",
+		"pathlength_internal_and_max1", "pathlength_internal_and_max2",
 		"pathlength_min1_max1", "pathlength_min1_max2", "pathlength_min2_max2"}
 
 	AS120         = "1-ff00:0:120"

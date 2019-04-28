@@ -1,4 +1,5 @@
 #A path length filter with min path length 1 and max 1
 [pathlength]
+AllowEmptyPaths = false
 MinPathLength = 1
 MaxPathLength = 1
