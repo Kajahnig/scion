@@ -12,6 +12,7 @@ go_library(
         "//go/lib/common:go_default_library",
         "//go/lib/config:go_default_library",
         "//go/lib/infra/modules/filters:go_default_library",
+        "//go/lib/infra/modules/filters/packet_filters:go_default_library",
         "//go/lib/scmp:go_default_library",
         "//go/lib/snet:go_default_library",
         "//go/lib/spath:go_default_library",

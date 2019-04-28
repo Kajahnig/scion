@@ -16,6 +16,7 @@ go_library(
         "//go/lib/ctrl/ack:go_default_library",
         "//go/lib/infra:go_default_library",
         "//go/lib/infra/modules/filters:go_default_library",
+        "//go/lib/infra/modules/filters/request_filters:go_default_library",
         "//go/lib/infra/modules/filters/request_filters/interval_request_limiting:go_default_library",
         "//go/lib/infra/modules/filters/request_filters/whitelisting:go_default_library",
         "//go/lib/log:go_default_library",

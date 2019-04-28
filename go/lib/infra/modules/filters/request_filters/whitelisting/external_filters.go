@@ -34,11 +34,12 @@ import (
 
 	"github.com/scionproto/scion/go/lib/addr"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters"
 	"github.com/scionproto/scion/go/lib/periodic"
 	"github.com/scionproto/scion/go/lib/snet"
 )
 
-var _ filters.ExternalFilter = (*ISDFilter)(nil)
+var _ request_filters.ExternalFilter = (*ISDFilter)(nil)
 
 type ISDFilter struct {
 	Isd addr.ISD
@@ -55,7 +56,7 @@ func (f *ISDFilter) ErrorMessage() string {
 	return ErrMsg
 }
 
-var _ filters.ExternalFilter = (*ISDFilter)(nil)
+var _ request_filters.ExternalFilter = (*ISDFilter)(nil)
 
 type NeighbourFilter struct {
 	Neighbours map[addr.IA]bool

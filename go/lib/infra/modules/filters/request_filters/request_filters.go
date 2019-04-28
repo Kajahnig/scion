@@ -12,29 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package whitelisting
+package request_filters
 
 import (
 	"github.com/scionproto/scion/go/lib/infra/modules/filters"
-	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters"
 	"github.com/scionproto/scion/go/lib/snet"
 )
 
-const ErrMsg = "Not on whitelist"
-
-var _ request_filters.InternalFilter = (*DroppingFilter)(nil)
-var _ request_filters.ExternalFilter = (*DroppingFilter)(nil)
-
-type DroppingFilter struct{}
-
-func (f *DroppingFilter) FilterInternal(addr snet.Addr) (filters.FilterResult, error) {
-	return filters.FilterDrop, nil
+type InternalFilter interface {
+	FilterInternal(addr snet.Addr) (filters.FilterResult, error)
+	ErrorMessage() string
 }
 
-func (f *DroppingFilter) FilterExternal(addr snet.Addr) (filters.FilterResult, error) {
-	return filters.FilterDrop, nil
-}
-
-func (f *DroppingFilter) ErrorMessage() string {
-	return ErrMsg
+type ExternalFilter interface {
+	FilterExternal(addr snet.Addr) (filters.FilterResult, error)
+	ErrorMessage() string
 }

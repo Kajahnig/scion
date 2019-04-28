@@ -14,11 +14,6 @@
 
 package filters
 
-import (
-	"github.com/scionproto/scion/go/lib/scmp"
-	"github.com/scionproto/scion/go/lib/snet"
-)
-
 type FilterResult int
 
 const (
@@ -43,19 +38,4 @@ func (result FilterResult) ToString() string {
 	default:
 		return "Unknown Filter Result Value"
 	}
-}
-
-type PacketFilter interface {
-	FilterPacket(pkt *snet.SCIONPacket) (FilterResult, error)
-	SCMPError() scmp.ClassType
-}
-
-type InternalFilter interface {
-	FilterInternal(addr snet.Addr) (FilterResult, error)
-	ErrorMessage() string
-}
-
-type ExternalFilter interface {
-	FilterExternal(addr snet.Addr) (FilterResult, error)
-	ErrorMessage() string
 }

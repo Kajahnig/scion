@@ -26,13 +26,14 @@ import (
 
 	"github.com/scionproto/scion/go/lib/common"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters/packet_filters"
 	"github.com/scionproto/scion/go/lib/scmp"
 	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/lib/spse"
 	"github.com/scionproto/scion/go/lib/spse/scmp_auth"
 )
 
-var _ filters.PacketFilter = (*DRKeyFilter)(nil)
+var _ packet_filters.PacketFilter = (*DRKeyFilter)(nil)
 
 type DRKeyFilter struct {
 	internalFiltering bool

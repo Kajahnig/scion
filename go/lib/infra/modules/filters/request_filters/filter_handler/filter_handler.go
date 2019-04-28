@@ -19,6 +19,7 @@ import (
 	"github.com/scionproto/scion/go/lib/ctrl/ack"
 	"github.com/scionproto/scion/go/lib/infra"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters/interval_request_limiting"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters/whitelisting"
 	"github.com/scionproto/scion/go/lib/log"
@@ -57,8 +58,8 @@ func Init(locIA addr.IA, config *FilterHandlerConfig, path string) error {
 var _ infra.Handler = (*FilterHandler)(nil)
 
 type FilterHandler struct {
-	internalFilters []filters.InternalFilter
-	externalFilters []filters.ExternalFilter
+	internalFilters []request_filters.InternalFilter
+	externalFilters []request_filters.ExternalFilter
 	originalHandler infra.Handler
 }
 
@@ -108,8 +109,8 @@ func sendErrorAck(r *infra.Request, errDesc string) bool {
 
 func New(messageType infra.MessageType, originalHandler infra.Handler) infra.Handler {
 	if rcfg, present := cfg.RequestConfigs[messageType.String()]; present {
-		iFilters := make([]filters.InternalFilter, 0)
-		eFilters := make([]filters.ExternalFilter, 0)
+		iFilters := make([]request_filters.InternalFilter, 0)
+		eFilters := make([]request_filters.ExternalFilter, 0)
 		if rcfg.InternalWL != Nothing {
 			iFilters = append(iFilters, newInternalWLFilter(rcfg.InternalWL))
 		}
@@ -131,7 +132,7 @@ func New(messageType infra.MessageType, originalHandler infra.Handler) infra.Han
 	return originalHandler
 }
 
-func newInternalWLFilter(setting string) filters.InternalFilter {
+func newInternalWLFilter(setting string) request_filters.InternalFilter {
 	switch setting {
 	case InfraWL:
 		if infraFilter == nil {
@@ -144,7 +145,7 @@ func newInternalWLFilter(setting string) filters.InternalFilter {
 	}
 }
 
-func newExternalWLFilter(setting string) filters.ExternalFilter {
+func newExternalWLFilter(setting string) request_filters.ExternalFilter {
 	switch setting {
 	case ISDWL:
 		if isdFilter == nil {
@@ -180,7 +181,7 @@ func newExternalWLFilter(setting string) filters.ExternalFilter {
 	}
 }
 
-func newInternalRLFilter(setting string) filters.InternalFilter {
+func newInternalRLFilter(setting string) request_filters.InternalFilter {
 	switch setting {
 	default:
 		if intIntervalFilter == nil {
@@ -190,7 +191,7 @@ func newInternalRLFilter(setting string) filters.InternalFilter {
 	}
 }
 
-func newExternalRLFilter(setting string) filters.ExternalFilter {
+func newExternalRLFilter(setting string) request_filters.ExternalFilter {
 	switch setting {
 	default:
 		if extIntervalFilter == nil {

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package filters
+package packet_filters
 
 import (
 	"fmt"
@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/scionproto/scion/go/lib/common"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters"
 	"github.com/scionproto/scion/go/lib/layers"
 	"github.com/scionproto/scion/go/lib/log"
 	"github.com/scionproto/scion/go/lib/overlay"
@@ -28,6 +29,11 @@ import (
 	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/lib/spath"
 )
+
+type PacketFilter interface {
+	FilterPacket(pkt *snet.SCIONPacket) (filters.FilterResult, error)
+	SCMPError() scmp.ClassType
+}
 
 var _ snet.PacketConn = (*FilterPacketConn)(nil)
 
@@ -72,14 +78,14 @@ func (c *FilterPacketConn) filter(pkt *snet.SCIONPacket, ov *overlay.OverlayAddr
 	for _, f := range c.packetFilters {
 		result, err := (*f).FilterPacket(pkt)
 		switch result {
-		case FilterError:
+		case filters.FilterError:
 			log.Debug(fmt.Sprintf("%v encountered an error on packet from source IA %v",
 				reflect.TypeOf(*f), pkt.Source.IA.String()), err)
 			return false, err
-		case FilterAccept:
+		case filters.FilterAccept:
 			log.Debug(fmt.Sprintf("%v accepted packet from source IA %v",
 				reflect.TypeOf(*f), pkt.Source.IA.String()))
-		case FilterDrop:
+		case filters.FilterDrop:
 			if pkt.L4Header.L4Type() == common.L4SCMP {
 				//Drop SCMP packets without sending an SCMP back
 				log.Debug(fmt.Sprintf("%v dropped SCMP packet from IA %v",

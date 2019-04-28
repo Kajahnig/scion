@@ -32,6 +32,7 @@ import (
 	"math"
 
 	"github.com/scionproto/scion/go/lib/infra/modules/filters"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters/counting_bloom"
 	"github.com/scionproto/scion/go/lib/periodic"
 	"github.com/scionproto/scion/go/lib/snet"
@@ -39,8 +40,8 @@ import (
 
 const ErrMsg = "Request limit exceeded"
 
-var _ filters.InternalFilter = (*IntervalRequestLimitFilter)(nil)
-var _ filters.ExternalFilter = (*IntervalRequestLimitFilter)(nil)
+var _ request_filters.InternalFilter = (*IntervalRequestLimitFilter)(nil)
+var _ request_filters.ExternalFilter = (*IntervalRequestLimitFilter)(nil)
 
 type IntervalRequestLimitFilter struct {
 	filter      *counting_bloom.CBF

@@ -30,12 +30,13 @@ package path_length
 import (
 	"github.com/scionproto/scion/go/lib/common"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters/packet_filters"
 	"github.com/scionproto/scion/go/lib/scmp"
 	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/lib/spath"
 )
 
-var _ filters.PacketFilter = (*PathLengthFilter)(nil)
+var _ packet_filters.PacketFilter = (*PathLengthFilter)(nil)
 
 type PathLengthFilter struct {
 	allowEmptyPaths bool

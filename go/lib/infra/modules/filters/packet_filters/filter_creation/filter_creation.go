@@ -15,18 +15,18 @@
 package filter_creation
 
 import (
-	"github.com/scionproto/scion/go/lib/infra/modules/filters"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters/packet_filters"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/packet_filters/drkey_filter"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/packet_filters/path_length"
 )
 
-func CreateFiltersFromConfig(cfg PacketFilterConfig) ([]*filters.PacketFilter, error) {
+func CreateFiltersFromConfig(cfg PacketFilterConfig) ([]*packet_filters.PacketFilter, error) {
 
-	var results []*filters.PacketFilter
+	var results []*packet_filters.PacketFilter
 	var err error
 
 	if cfg.Pathlength != nil {
-		var filter filters.PacketFilter
+		var filter packet_filters.PacketFilter
 		filter, err = path_length.NewPathLengthFilterFromConfig(cfg.Pathlength)
 		if err != nil {
 			return nil, err
@@ -34,7 +34,7 @@ func CreateFiltersFromConfig(cfg PacketFilterConfig) ([]*filters.PacketFilter, e
 		results = append(results, &filter)
 	}
 	if cfg.Drkey != nil {
-		var filter filters.PacketFilter
+		var filter packet_filters.PacketFilter
 		filter = drkey_filter.NewDRKeyFilterFromConfig(cfg.Drkey)
 		results = append(results, &filter)
 	}

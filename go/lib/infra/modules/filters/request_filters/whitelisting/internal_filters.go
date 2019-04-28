@@ -30,11 +30,12 @@ import (
 	"time"
 
 	"github.com/scionproto/scion/go/lib/infra/modules/filters"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters"
 	"github.com/scionproto/scion/go/lib/periodic"
 	"github.com/scionproto/scion/go/lib/snet"
 )
 
-var _ filters.InternalFilter = (*InfraNodesFilter)(nil)
+var _ request_filters.InternalFilter = (*InfraNodesFilter)(nil)
 
 type InfraNodesFilter struct {
 	InfraNodes map[string]bool

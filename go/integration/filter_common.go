@@ -19,8 +19,8 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"github.com/scionproto/scion/go/lib/infra/modules/filters"
-	"github.com/scionproto/scion/go/lib/infra/modules/filters/filter_creation"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters/packet_filters"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters/packet_filters/filter_creation"
 	"github.com/scionproto/scion/go/lib/log"
 	"github.com/scionproto/scion/go/lib/snet"
 )
@@ -60,7 +60,7 @@ func validateFilterFlags() {
 
 func initNetworkWithFilterDispatcher() {
 	// Initialize custom scion network with filter dispatcher
-	err := snet.InitCustom(Local.IA, Sciond, filters.NewFilteringPacketDispatcher(createFiltersFromConfig()))
+	err := snet.InitCustom(Local.IA, Sciond, packet_filters.NewFilteringPacketDispatcher(createFiltersFromConfig()))
 
 	if err != nil {
 		LogFatal("Unable to initialize custom SCION network with filter dispatcher", "err", err)
@@ -68,7 +68,7 @@ func initNetworkWithFilterDispatcher() {
 	log.Debug("SCION network successfully initialized")
 }
 
-func createFiltersFromConfig() []*filters.PacketFilter {
+func createFiltersFromConfig() []*packet_filters.PacketFilter {
 	var cfg filter_creation.PacketFilterConfig
 	_, err := toml.DecodeFile(FilterConfigDir+"/"+ConfigFileName+".toml", &cfg)
 
