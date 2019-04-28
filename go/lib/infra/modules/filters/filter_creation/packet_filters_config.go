@@ -20,7 +20,7 @@ import (
 
 	"github.com/scionproto/scion/go/lib/common"
 	"github.com/scionproto/scion/go/lib/config"
-	"github.com/scionproto/scion/go/lib/infra/modules/filters/drkey_filter"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters/packet_filters/drkey_filter"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/path_length"
 )
 

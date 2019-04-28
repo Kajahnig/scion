@@ -22,7 +22,7 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 )
 
-func TestPathLengthConfig(t *testing.T) {
+func TestDRKeyConfig_Sample(t *testing.T) {
 	Convey("Sample correct", t, func() {
 		var sample bytes.Buffer
 		var cfg DRKeyConfig
@@ -30,5 +30,17 @@ func TestPathLengthConfig(t *testing.T) {
 		meta, err := toml.Decode(sample.String(), &cfg)
 		SoMsg("err", err, ShouldBeNil)
 		SoMsg("unparsed", meta.Undecoded(), ShouldBeEmpty)
+
+		SoMsg("Internal setting correct", cfg.InternalFiltering, ShouldBeTrue)
+		SoMsg("External setting correct", cfg.ExternalFiltering, ShouldBeFalse)
+	})
+}
+
+func TestDRKeyConfig_Validate(t *testing.T) {
+	Convey("Validation of the config should fail if internal and external filtering is disabled", t, func() {
+		cfg := DRKeyConfig{InternalFiltering: false, ExternalFiltering: false}
+		err := cfg.Validate()
+
+		SoMsg("Validation err should not be nil", err, ShouldNotBeNil)
 	})
 }

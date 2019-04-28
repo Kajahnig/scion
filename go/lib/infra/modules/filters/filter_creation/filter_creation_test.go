@@ -22,7 +22,7 @@ import (
 	"github.com/BurntSushi/toml"
 	. "github.com/smartystreets/goconvey/convey"
 
-	"github.com/scionproto/scion/go/lib/infra/modules/filters/drkey_filter"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters/packet_filters/drkey_filter"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/path_length"
 )
 

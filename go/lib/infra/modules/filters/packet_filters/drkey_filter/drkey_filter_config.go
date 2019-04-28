@@ -17,29 +17,37 @@ package drkey_filter
 import (
 	"io"
 
+	"github.com/scionproto/scion/go/lib/common"
 	"github.com/scionproto/scion/go/lib/config"
 )
 
 const drkeySample = `
-# there is no config for drkey
+#If AS internal packets need to be authenticated with DRKey
+InternalFiltering = true
+#If external packets need to be authenticated with DRKey
+ExternalFiltering = false
 `
 
 var _ config.Config = (*DRKeyConfig)(nil)
 
 type DRKeyConfig struct {
+	config.NoDefaulter
+	InternalFiltering bool
+	ExternalFiltering bool
 }
 
-func (cfg *DRKeyConfig) InitDefaults() {
-}
-
-func (cfg *DRKeyConfig) Validate() error {
+func (cfg DRKeyConfig) Validate() error {
+	if !cfg.InternalFiltering && !cfg.ExternalFiltering {
+		return common.NewBasicError("DRKey filter with internal and external filtering disabled "+
+			"only adds overhead", nil)
+	}
 	return nil
 }
 
-func (cfg *DRKeyConfig) ConfigName() string {
-	return "drkey"
+func (cfg DRKeyConfig) ConfigName() string {
+	return "DRKey"
 }
 
-func (cfg *DRKeyConfig) Sample(dst io.Writer, path config.Path, ctx config.CtxMap) {
+func (cfg DRKeyConfig) Sample(dst io.Writer, path config.Path, ctx config.CtxMap) {
 	config.WriteString(dst, drkeySample)
 }

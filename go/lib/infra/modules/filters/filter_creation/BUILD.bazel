@@ -12,7 +12,7 @@ go_library(
         "//go/lib/common:go_default_library",
         "//go/lib/config:go_default_library",
         "//go/lib/infra/modules/filters:go_default_library",
-        "//go/lib/infra/modules/filters/drkey_filter:go_default_library",
+        "//go/lib/infra/modules/filters/packet_filters/drkey_filter:go_default_library",
         "//go/lib/infra/modules/filters/path_length:go_default_library",
     ],
 )
@@ -26,7 +26,7 @@ go_test(
     embed = [":go_default_library"],
     deps = [
         "//go/lib/config:go_default_library",
-        "//go/lib/infra/modules/filters/drkey_filter:go_default_library",
+        "//go/lib/infra/modules/filters/packet_filters/drkey_filter:go_default_library",
         "//go/lib/infra/modules/filters/path_length:go_default_library",
         "@com_github_burntsushi_toml//:go_default_library",
         "@com_github_smartystreets_goconvey//convey:go_default_library",

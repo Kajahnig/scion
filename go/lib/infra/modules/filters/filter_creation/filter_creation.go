@@ -16,7 +16,7 @@ package filter_creation
 
 import (
 	"github.com/scionproto/scion/go/lib/infra/modules/filters"
-	"github.com/scionproto/scion/go/lib/infra/modules/filters/drkey_filter"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters/packet_filters/drkey_filter"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/path_length"
 )
 
@@ -35,7 +35,7 @@ func CreateFiltersFromConfig(cfg PacketFilterConfig) ([]*filters.PacketFilter, e
 	}
 	if cfg.Drkey != nil {
 		var filter filters.PacketFilter
-		filter = &drkey_filter.DRKeyFilter{}
+		filter = drkey_filter.NewDRKeyFilterFromConfig(cfg.Drkey)
 		results = append(results, &filter)
 	}
 	return results, nil

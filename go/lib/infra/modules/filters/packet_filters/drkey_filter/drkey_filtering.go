@@ -11,6 +11,13 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+//
+//
+// The DRKey filter filters packets depending on the validity of their drkey extension.
+// If a drkey extension is present the filter returns accept if the contained MAC is valid and drop otherwise.
+// If no drkey extension is present the filter result depends on the configuration of the filter, if internal
+// (or external) filtering is disabled, internal (or external) packets are also accepted without an extension.
+//
 
 package drkey_filter
 
@@ -27,16 +34,40 @@ import (
 
 var _ filters.PacketFilter = (*DRKeyFilter)(nil)
 
-type DRKeyFilter struct{}
+type DRKeyFilter struct {
+	internalFiltering bool
+	externalFiltering bool
+}
+
+func NewDRKeyFilterFromConfig(cfg *DRKeyConfig) *DRKeyFilter {
+	return &DRKeyFilter{
+		internalFiltering: cfg.InternalFiltering,
+		externalFiltering: cfg.ExternalFiltering,
+	}
+}
 
 func (f *DRKeyFilter) FilterPacket(pkt *snet.SCIONPacket) (filters.FilterResult, error) {
 
-	dir, mac1, err := extractDirAndMac(pkt)
+	dir, receivedMac, err := extractDirAndMac(pkt)
 	if err != nil {
 		return filters.FilterError, err
-	} else if mac1 == nil {
+	} else if receivedMac == nil {
 		//there was no drkey extension
-		return filters.FilterDrop, nil
+		if pkt.SCIONPacketInfo.Path.IsEmpty() {
+			//it is an internal packet
+			if f.internalFiltering {
+				return filters.FilterDrop, nil
+			}
+			//we don't do internal filtering
+			return filters.FilterAccept, nil
+		} else {
+			//it is an external packet
+			if f.externalFiltering {
+				return filters.FilterDrop, nil
+			}
+			//we don't do internal filtering
+			return filters.FilterAccept, nil
+		}
 	}
 
 	key, err := findDRKey(dir)
@@ -44,12 +75,12 @@ func (f *DRKeyFilter) FilterPacket(pkt *snet.SCIONPacket) (filters.FilterResult,
 		return filters.FilterError, err
 	}
 
-	mac2, err := calculateMac(key, pkt)
+	calculatedMac, err := calculateMac(key, pkt)
 	if err != nil {
 		return filters.FilterError, err
 	}
 
-	if bytes.Equal(mac1, mac2) {
+	if bytes.Equal(receivedMac, calculatedMac) {
 		return filters.FilterAccept, nil
 	}
 	return filters.FilterDrop, nil

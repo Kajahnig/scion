@@ -3,3 +3,5 @@ MinPathLength = 3
 MaxPathLength = 4
 
 [drkey]
+InternalFiltering = false
+ExternalFiltering = true
