@@ -55,7 +55,7 @@ func realMain() int {
 	defer log.LogPanicAndExit()
 	defer log.Flush()
 	addFlags()
-	integration.SetupWithFilters()
+	integration.SetupWithPacketFilters()
 	validateFlags()
 	if integration.Mode == integration.ModeServer {
 		server{}.run()

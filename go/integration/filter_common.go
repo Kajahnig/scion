@@ -30,10 +30,10 @@ const (
 )
 
 var (
-	ConfigFileName string
+	packetFilterConfig string
 )
 
-func SetupWithFilters() {
+func SetupWithPacketFilters() {
 	addFlags()
 	addFilterFlags()
 	validateFlags()
@@ -46,14 +46,14 @@ func SetupWithFilters() {
 }
 
 func addFilterFlags() {
-	flag.StringVar(&ConfigFileName, "config", "",
-		"(Mandatory for servers) Name of the filter config file in "+FilterConfigDir)
+	flag.StringVar(&packetFilterConfig, "pfConfig", "",
+		"(Mandatory for servers) Name of the packet filter configuration in "+FilterConfigDir)
 }
 
 func validateFilterFlags() {
 	if Mode == ModeServer {
-		if ConfigFileName == "" {
-			LogFatal("Missing filter config file")
+		if packetFilterConfig == "" {
+			LogFatal("Missing packet filter confi")
 		}
 	}
 }
@@ -70,7 +70,7 @@ func initNetworkWithFilterDispatcher() {
 
 func createFiltersFromConfig() []*packet_filters.PacketFilter {
 	var cfg filter_creation.PacketFilterConfig
-	_, err := toml.DecodeFile(FilterConfigDir+"/"+ConfigFileName+".toml", &cfg)
+	_, err := toml.DecodeFile(FilterConfigDir+"/"+packetFilterConfig+".toml", &cfg)
 
 	cfg.InitDefaults()
 	err = cfg.Validate()
