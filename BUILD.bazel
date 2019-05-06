@@ -46,6 +46,9 @@ pkg_tar(
         "//go/integration/whitelist_filter_integration:whitelist_filter_integration",
         "//go/integration/pathlength_filter_integration:pathlength_filter_integration",
         "//go/integration/intervalRL_filter_integration:intervalRL_filter_integration",
+        "//go/integration/test_server_and_client:test_server_and_client",
+        "//go/integration/test_server_runner:test_server_runner",
+        "//go/integration/test_client_runner:test_client_runner",
     ],
     mode = "0755",
 )
