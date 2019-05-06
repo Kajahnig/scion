@@ -107,7 +107,6 @@ func validateFlags() {
 
 type server struct {
 	conn snet.Conn
-	msgr infra.Messenger
 }
 
 func (s server) run() {
@@ -130,6 +129,9 @@ func (s server) run() {
 				messenger.DefaultAdapter,
 				log.Root(),
 			),
+			AddressRewriter: &messenger.AddressRewriter{
+				Router: &snet.BaseRouter{IA: integration.Local.IA},
+			},
 		},
 	)
 
@@ -210,6 +212,9 @@ func (c client) run() int {
 				messenger.DefaultAdapter,
 				log.Root(),
 			),
+			AddressRewriter: &messenger.AddressRewriter{
+				Router: &snet.BaseRouter{IA: integration.Local.IA},
+			},
 		},
 	)
 
