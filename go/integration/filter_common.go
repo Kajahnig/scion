@@ -53,7 +53,7 @@ func addFilterFlags() {
 func validateFilterFlags() {
 	if Mode == ModeServer {
 		if packetFilterConfig == "" {
-			LogFatal("Missing packet filter confi")
+			LogFatal("Missing packet filter config")
 		}
 	}
 }

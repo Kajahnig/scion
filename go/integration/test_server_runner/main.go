@@ -28,24 +28,27 @@ import (
 var (
 	name         = "test_runner_"
 	cmd          = "./bin/test_server_and_client"
-	dstASList    = "1-ff00:0:120"                                           //flag.String("dstIAs", "", "Comma separated list of destination IAs (servers).")
-	topoFilePath = "./gen/ISD1/ASff00_0_120/br1-ff00_0_120-1/topology.json" //flag.String("topoFilePath", "", "Path to the topology file.")
+	dstASList    = "1-ff00:0:120"
+	topoFilePath = "./filter_topos/"
 
-	runAlone            bool
+	runWithInfra        bool
 	baseline            string
 	sleepTime           int
 	requestFilterConfig string
 	packetFilterConfig  string
+	topoFileName        string
 )
 
 func addFlags() {
-	flag.BoolVar(&runAlone, "alone", false, "wheather the server should run without the infra")
-	flag.StringVar(&baseline, "baseline", "false", "wheather this is a baseline test (counts successful requests)")
+	flag.BoolVar(&runWithInfra, "infra", false, "whether the server should run with the infra (default false)")
+	flag.StringVar(&baseline, "baseline", "false", "whether this is a baseline test (counts successful requests)")
 	flag.IntVar(&sleepTime, "time", 20, "How long the server should run (seconds)")
 	flag.StringVar(&requestFilterConfig, "rfConfig", "empty_config",
-		"(Mandatory for servers) Name of the request filter configuration in /filter_configs")
+		"(Mandatory for servers) Name of the request filter configuration in ./go/integration/filter_configs")
 	flag.StringVar(&packetFilterConfig, "pfConfig", "empty_config",
-		"(Mandatory for servers) Name of the packet filter configuration in /filter_configs")
+		"(Mandatory for servers) Name of the packet filter configuration in ./go/integration/filter_configs")
+	flag.StringVar(&topoFileName, "topo", "default_topology.json",
+		"(Mandatory for servers) Name of the topology file in ./filter_topos")
 }
 
 func main() {
@@ -64,21 +67,27 @@ func realMain() int {
 	defer log.LogPanicAndExit()
 	defer log.Flush()
 	var serverArgs []string
-	if runAlone {
-		serverArgs = []string{"-log.console", "debug", "-mode", "server",
+	if runWithInfra {
+		serverArgs = []string{
 			"-local", integration.DstAddrPattern + ":12345",
-			"-rfConfig", requestFilterConfig,
+			"-mode", "server",
+			"-log.console", "debug",
 			"-pfConfig", packetFilterConfig,
-			"-topoFilePath", topoFilePath,
+			"-rfConfig", requestFilterConfig,
+			"-topoFilePath", topoFilePath + topoFileName,
 			"-baseline", baseline,
-			"-sciond", "/run/shm/sciond/1-ff00_0_120.sock"}
+		}
 	} else {
-		serverArgs = []string{"-log.console", "debug", "-mode", "server",
+		serverArgs = []string{
 			"-local", integration.DstAddrPattern + ":12345",
-			"-rfConfig", requestFilterConfig,
+			"-mode", "server",
+			"-sciond", "/run/shm/sciond/1-ff00_0_120.sock",
+			"-log.console", "debug",
 			"-pfConfig", packetFilterConfig,
+			"-rfConfig", requestFilterConfig,
+			"-topoFilePath", topoFilePath + topoFileName,
 			"-baseline", baseline,
-			"-topoFilePath", topoFilePath}
+		}
 	}
 	in := integration.NewBinaryIntegration(intTestName, cmd, []string{}, serverArgs)
 	if err := runTests(in, integration.IAPairs(integration.DispAddr)); err != nil {

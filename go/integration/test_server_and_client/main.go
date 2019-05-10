@@ -18,12 +18,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/BurntSushi/toml"
-	"github.com/scionproto/scion/go/lib/periodic"
 	"os"
 	"strconv"
 	"sync/atomic"
 	"time"
+
+	"github.com/BurntSushi/toml"
 
 	"github.com/scionproto/scion/go/integration"
 	"github.com/scionproto/scion/go/lib/ctrl/cert_mgmt"
@@ -34,6 +34,7 @@ import (
 	"github.com/scionproto/scion/go/lib/infra/transport"
 	libint "github.com/scionproto/scion/go/lib/integration"
 	"github.com/scionproto/scion/go/lib/log"
+	"github.com/scionproto/scion/go/lib/periodic"
 	"github.com/scionproto/scion/go/lib/scrypto"
 	"github.com/scionproto/scion/go/lib/snet"
 )
@@ -73,7 +74,7 @@ func realMain() int {
 func addFlags() {
 	flag.Var((*snet.Addr)(&remote), "remote", "(Mandatory for clients) address to connect to")
 	flag.StringVar(&requestFilterConfig, "rfConfig", "",
-		"(Mandatory for servers) Name of the request filter configuration in /filter_configs")
+		"(Mandatory for servers) Name of the request filter config in "+ConfigDir)
 	flag.StringVar(&topoFilePath, "topoFilePath", "",
 		"(Mandatory for servers) Path to the topology file of the server")
 	flag.BoolVar(&baseline, "baseline", false, "If this a baseline test (needs counter handlers)")
