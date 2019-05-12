@@ -41,13 +41,12 @@ var (
 
 func addFlags() {
 	flag.BoolVar(&runWithInfra, "infra", false, "whether the server should run with the infra (default false)")
-	flag.StringVar(&baseline, "baseline", "false", "whether this is a baseline test (counts successful requests)")
 	flag.IntVar(&sleepTime, "time", 20, "How long the server should run (seconds)")
-	flag.StringVar(&requestFilterConfig, "rfConfig", "empty_config",
+	flag.StringVar(&requestFilterConfig, "rfConfig", "",
 		"(Mandatory for servers) Name of the request filter configuration in ./go/integration/filter_configs")
-	flag.StringVar(&packetFilterConfig, "pfConfig", "empty_config",
+	flag.StringVar(&packetFilterConfig, "pfConfig", "",
 		"(Mandatory for servers) Name of the packet filter configuration in ./go/integration/filter_configs")
-	flag.StringVar(&topoFileName, "topo", "default_topology.json",
+	flag.StringVar(&topoFileName, "topo", "default_topology",
 		"(Mandatory for servers) Name of the topology file in ./filter_topos")
 }
 
@@ -74,8 +73,7 @@ func realMain() int {
 			"-log.console", "debug",
 			"-pfConfig", packetFilterConfig,
 			"-rfConfig", requestFilterConfig,
-			"-topoFilePath", topoFilePath + topoFileName,
-			"-baseline", baseline,
+			"-topoFilePath", topoFilePath + topoFileName + ".json",
 		}
 	} else {
 		serverArgs = []string{
@@ -85,8 +83,7 @@ func realMain() int {
 			"-log.console", "debug",
 			"-pfConfig", packetFilterConfig,
 			"-rfConfig", requestFilterConfig,
-			"-topoFilePath", topoFilePath + topoFileName,
-			"-baseline", baseline,
+			"-topoFilePath", topoFilePath + topoFileName + ".json",
 		}
 	}
 	in := integration.NewBinaryIntegration(intTestName, cmd, []string{}, serverArgs)

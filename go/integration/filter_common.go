@@ -30,15 +30,14 @@ const (
 )
 
 var (
-	packetFilterConfig string
+	PacketFilterConfig string
 )
 
 func SetupWithPacketFilters() {
 	addFlags()
 	addFilterFlags()
 	validateFlags()
-	validateFilterFlags()
-	if Mode == ModeServer {
+	if Mode == ModeServer && PacketFilterConfig != "" {
 		initNetworkWithFilterDispatcher()
 	} else {
 		initNetwork()
@@ -46,16 +45,8 @@ func SetupWithPacketFilters() {
 }
 
 func addFilterFlags() {
-	flag.StringVar(&packetFilterConfig, "pfConfig", "",
+	flag.StringVar(&PacketFilterConfig, "pfConfig", "",
 		"(Mandatory for servers) Name of the packet filter configuration in "+FilterConfigDir)
-}
-
-func validateFilterFlags() {
-	if Mode == ModeServer {
-		if packetFilterConfig == "" {
-			LogFatal("Missing packet filter config")
-		}
-	}
 }
 
 func initNetworkWithFilterDispatcher() {
@@ -65,12 +56,16 @@ func initNetworkWithFilterDispatcher() {
 	if err != nil {
 		LogFatal("Unable to initialize custom SCION network with filter dispatcher", "err", err)
 	}
-	log.Debug("SCION network successfully initialized")
+	log.Debug("SCION network with filter dispatcher successfully initialized")
 }
 
 func createFiltersFromConfig() []*packet_filters.PacketFilter {
 	var cfg filter_creation.PacketFilterConfig
-	_, err := toml.DecodeFile(FilterConfigDir+"/"+packetFilterConfig+".toml", &cfg)
+	_, err := toml.DecodeFile(FilterConfigDir+"/"+PacketFilterConfig+".toml", &cfg)
+
+	if err != nil {
+		LogFatal("Error decoding toml file", "err", err)
+	}
 
 	cfg.InitDefaults()
 	err = cfg.Validate()

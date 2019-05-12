@@ -1,0 +1,4 @@
+#Empty request filter config for performance tests
+[RequestConfigs]
+    [RequestConfigs.TRCRequest]
+    [RequestConfigs.ChainRequest]

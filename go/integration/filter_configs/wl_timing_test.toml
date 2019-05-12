@@ -1,0 +1,10 @@
+# request filter config for neighbour whitelisting performance test
+[WhitelistRescanning]
+    Neighbours = "10s"
+
+[RequestConfigs]
+    [RequestConfigs.TRCRequest]
+    ExternalWL = "Neighbours"
+
+    [RequestConfigs.ChainRequest]
+    ExternalWL = "Neighbours"

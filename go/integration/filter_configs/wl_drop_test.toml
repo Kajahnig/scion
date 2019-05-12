@@ -1,0 +1,7 @@
+# request filter config for whitelisting drop performance tests
+[RequestConfigs]
+    [RequestConfigs.TRCRequest]
+    ExternalWL = "Drop"
+
+    [RequestConfigs.ChainRequest]
+    ExternalWL = "Drop"

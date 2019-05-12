@@ -47,9 +47,7 @@ const (
 var (
 	remote              snet.Addr
 	requestFilterConfig string
-	packetFilterConfig  string
 	topoFilePath        string
-	baseline            bool
 	counter             uint32
 )
 
@@ -77,7 +75,6 @@ func addFlags() {
 		"(Mandatory for servers) Name of the request filter config in "+ConfigDir)
 	flag.StringVar(&topoFilePath, "topoFilePath", "",
 		"(Mandatory for servers) Path to the topology file of the server")
-	flag.BoolVar(&baseline, "baseline", false, "If this a baseline test (needs counter handlers)")
 }
 
 func validateFlags() {
@@ -90,11 +87,6 @@ func validateFlags() {
 		}
 		if remote.Host.L4.Port() == 0 {
 			integration.LogFatal("Invalid remote port", "remote port", remote.Host.L4.Port())
-		}
-	}
-	if integration.Mode == integration.ModeServer {
-		if requestFilterConfig == "" {
-			integration.LogFatal("Missing request filter config")
 		}
 	}
 }
@@ -129,24 +121,22 @@ func (s server) run() {
 		},
 	)
 
-	var cfg filter_handler.FilterHandlerConfig
-	_, err = toml.DecodeFile(ConfigDir+"/"+requestFilterConfig+".toml", &cfg)
-	if err != nil {
-		integration.LogFatal("Unable to decode configuration file", "err", err)
+	cfg := filter_handler.FilterHandlerConfig{}
+	if requestFilterConfig != "" {
+		_, err = toml.DecodeFile(ConfigDir+"/"+requestFilterConfig+".toml", &cfg)
+		if err != nil {
+			integration.LogFatal("Unable to decode configuration file", "err", err)
+		}
 	}
-	cfg.InitDefaults()
-	err = cfg.Validate()
-	if err != nil {
-		integration.LogFatal("Error validating the configuration file", "err", err)
-	}
-
-	log.Debug(fmt.Sprintf("%v", cfg))
 
 	err = filter_handler.Init(integration.Local.IA, &cfg, topoFilePath)
+	if err != nil {
+		integration.LogFatal("Error initializing the filter handler", "err", err)
+	}
 
 	//add handlers to the messenger
-	msgr.AddHandler(infra.TRCRequest, getOriginalHandler(infra.TRCRequest))
-	msgr.AddHandler(infra.ChainRequest, getOriginalHandler(infra.ChainRequest))
+	msgr.AddHandler(infra.TRCRequest, getHandler(infra.TRCRequest))
+	msgr.AddHandler(infra.ChainRequest, getHandler(infra.ChainRequest))
 	log.Debug("Listening", "local", conn.LocalAddr())
 
 	f, err := os.OpenFile(pathToLogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
@@ -154,30 +144,23 @@ func (s server) run() {
 		log.Crit("Error opening file to write counters", "err", err)
 	}
 	defer f.Close()
-	_, err = f.WriteString(fmt.Sprintf("Stats from %v with config %v\n", time.Now(), requestFilterConfig))
+	_, err = f.WriteString(fmt.Sprintf("Stats from %v with request config '%v' and packet config '%v' \n",
+		time.Now(), requestFilterConfig, integration.PacketFilterConfig))
 	if err != nil {
 		log.Crit("Error writing first sentence in stats file", "err", err)
 	}
 
 	//start periodic task that prints the counter every second
-	if baseline {
-		periodic.StartPeriodicTask(
-			&counterPrinter{&counter},
-			periodic.NewTicker(time.Second),
-			time.Second)
-	}
+	periodic.StartPeriodicTask(
+		&counterPrinter{&counter},
+		periodic.NewTicker(time.Second),
+		time.Second)
 	//listen and serve with messenger
 	msgr.ListenAndServe()
 }
 
-func getOriginalHandler(messageType infra.MessageType) infra.Handler {
-	if baseline {
-		return filter_handler.New(messageType, &countingHandler{})
-	}
-	return filter_handler.New(messageType,
-		infra.HandlerFunc(func(r *infra.Request) *infra.HandlerResult {
-			return infra.MetricsResultOk
-		}))
+func getHandler(messageType infra.MessageType) infra.Handler {
+	return filter_handler.New(messageType, &countingHandler{})
 }
 
 var _ infra.Handler = (*countingHandler)(nil)

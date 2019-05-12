@@ -1,0 +1,7 @@
+# request filter config for isd whitelisting performance tests
+[RequestConfigs]
+    [RequestConfigs.TRCRequest]
+    ExternalWL = "ISD"
+
+    [RequestConfigs.ChainRequest]
+    ExternalWL = "ISD"

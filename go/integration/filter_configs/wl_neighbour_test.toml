@@ -1,0 +1,7 @@
+# request filter config for neighbour whitelisting performance test
+[RequestConfigs]
+    [RequestConfigs.TRCRequest]
+    ExternalWL = "Neighbours"
+
+    [RequestConfigs.ChainRequest]
+    ExternalWL = "Neighbours"
