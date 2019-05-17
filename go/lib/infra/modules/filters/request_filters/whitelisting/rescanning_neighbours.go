@@ -35,7 +35,9 @@ func (f *NeighbourScanner) Run(ctx context.Context) {
 	newList := map[addr.IA]bool{}
 
 	for _, interf := range topo.IFInfoMap {
-		newList[interf.ISD_AS] = true
+		if interf.LinkType != proto.LinkType_peer {
+			newList[interf.ISD_AS] = true
+		}
 	}
 
 	f.filter.Lock.Lock()

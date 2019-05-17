@@ -32,12 +32,11 @@ const (
 // It is a copy of the topology.json from ASff00_0_211 of the default topology.
 // The second file is a copy of the topology.json from ASff00_0_120 of the default topology.
 var (
-	peer221, _        = addr.IAFromString("2-ff00:0:221")
-	peerOrChild111, _ = addr.IAFromString("1-ff00:0:111")
-	child212, _       = addr.IAFromString("2-ff00:0:212")
-	child222, _       = addr.IAFromString("2-ff00:0:222")
-	parent210, _      = addr.IAFromString("2-ff00:0:210")
-	otherAS, _        = addr.IAFromString("3-ff00:0:310")
+	child111, _  = addr.IAFromString("1-ff00:0:111")
+	child212, _  = addr.IAFromString("2-ff00:0:212")
+	child222, _  = addr.IAFromString("2-ff00:0:222")
+	parent210, _ = addr.IAFromString("2-ff00:0:210")
+	otherAS, _   = addr.IAFromString("3-ff00:0:310")
 
 	Core110, _  = addr.IAFromString("1-ff00:0:110")
 	Core130, _  = addr.IAFromString("1-ff00:0:130")
@@ -47,12 +46,12 @@ var (
 	scannedInfraNodes  = map[string]bool{"127.0.0.209": true, "127.0.0.210": true, "127.0.0.211": true, "127.0.0.212": true}
 	scannedInfraNodes1 = map[string]bool{"127.0.0.115": true, "127.0.0.114": true, "127.0.0.113": true, "127.0.0.116": true,
 		"127.0.0.117": true, "127.0.0.118": true}
-	scannedNeighbours      = map[addr.IA]bool{peer221: true, peerOrChild111: true, child212: true, child222: true, parent210: true}
-	scannedNeighbours1     = map[addr.IA]bool{Core110: true, Core130: true, Core220: true, peerOrChild111: true, Child121: true}
+	scannedNeighbours      = map[addr.IA]bool{child212: true, child222: true, parent210: true}
+	scannedNeighbours1     = map[addr.IA]bool{Core110: true, Core130: true, Core220: true, child111: true, Child121: true}
 	scannedUpNeighbours    = map[addr.IA]bool{parent210: true}
 	scannedUpNeighbours1   = map[addr.IA]bool{}
 	scannedDownNeighbours  = map[addr.IA]bool{child212: true, child222: true}
-	scannedDownNeighbours1 = map[addr.IA]bool{peerOrChild111: true, Child121: true}
+	scannedDownNeighbours1 = map[addr.IA]bool{child111: true, Child121: true}
 	scannedCoreNeighbours  = map[addr.IA]bool{}
 	scannedCoreNeighbours1 = map[addr.IA]bool{Core110: true, Core130: true, Core220: true}
 )

@@ -200,6 +200,7 @@ func (c client) run() int {
 	log.Debug("Send on", "local", c.conn.LocalAddr())
 
 	rs, err := getRequestSequences()
+	log.Debug("request sequences", "sequence", rs)
 	if err != nil {
 		integration.LogFatal("Unable to retrieve expected result", "err", err)
 	}
@@ -262,7 +263,7 @@ func (c client) requestRepeatedly(rs requestSequence) int {
 			if expectingError {
 				counter++
 			} else {
-				if limitViolated(counter, rs.maxPassingRequests) {
+				if limitViolated(counter, rs.maxPassingRequests, infraErr) {
 					return 1
 				}
 				expectingError = !expectingError
@@ -293,7 +294,7 @@ func (c client) requestRepeatedly(rs requestSequence) int {
 			log.Error("All requests were rejected")
 			return 1
 		}
-	} else if limitViolated(counter, rs.maxPassingRequests) {
+	} else if limitViolated(counter, rs.maxPassingRequests, nil) {
 		return 1
 	}
 
@@ -329,10 +330,18 @@ func (c client) requestCert() error {
 	return err
 }
 
-func limitViolated(counter, maxRequests int) bool {
+func limitViolated(counter, maxRequests int, errorType *infra.Error) bool {
 	if counter > maxRequests {
 		log.Error(fmt.Sprintf("Received %v ok messages from %s, which is over the limit (%v)",
 			counter, remote.IA, maxRequests))
+		return true
+	}
+	if counter == 0 {
+		if maxRequests == 0 {
+			return false
+		}
+		log.Error(fmt.Sprintf("Expected ok message from %s but got '%v' error instead",
+			remote.IA, errorType))
 		return true
 	}
 	log.Debug(fmt.Sprintf("Received %v ok(s) from %s - (limit %v)", counter, remote.IA, maxRequests))
