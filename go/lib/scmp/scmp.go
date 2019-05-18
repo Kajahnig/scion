@@ -16,6 +16,9 @@ package scmp
 
 import (
 	"fmt"
+	"strings"
+
+	"github.com/scionproto/scion/go/lib/common"
 )
 
 // https://github.com/scionproto/scion/blob/master/lib/packet/scmp/types.py
@@ -39,6 +42,21 @@ func (c Class) String() string {
 		return fmt.Sprintf("Class(%d)", c)
 	}
 	return fmt.Sprintf("%s(%d)", classNames[c], c)
+}
+
+//returns the class number given the name string
+func classIndex(name string) int {
+	for i, c := range classNames {
+		if name == c {
+			return i
+		}
+	}
+	return -1
+}
+
+//returns the number of different SCMP classes
+func NumOfSCMPClasses() int {
+	return len(classNames)
 }
 
 type Type uint16
@@ -110,8 +128,6 @@ const (
 	T_F_NotOnWhitelist Type = iota
 	T_F_PathLengthNotAccepted
 	T_F_ASOrClientRateLimitReached
-	T_F_HistoryRateLimitReached
-	T_F_DuplicateSuppression
 	T_F_NoDRKeyAuthentication
 )
 
@@ -139,6 +155,27 @@ func (t Type) Name(c Class) string {
 	return fmt.Sprintf("%s(%d)", names[t], t)
 }
 
+//returns the type number given the class name and the type name string
+func typeIndex(c Class, name string) int {
+	for i, t := range typeNameMap[c] {
+		if name == t {
+			return i
+		}
+	}
+	return -1
+}
+
+//returns the number of different SCMP classes
+func NumOfMaxSCMPTypes() int {
+	maxLength := 0
+	for _, typeList := range typeNameMap {
+		if len(typeList) > maxLength {
+			maxLength = len(typeList)
+		}
+	}
+	return maxLength
+}
+
 type ClassType struct {
 	Class Class
 	Type  Type
@@ -146,6 +183,29 @@ type ClassType struct {
 
 func (ct ClassType) String() string {
 	return fmt.Sprintf("%v:%v", ct.Class, ct.Type.Name(ct.Class))
+}
+
+//Unmarshalling function used for toml conversion,
+//format is Class:Type
+func (ct *ClassType) UnmarshalText(text []byte) error {
+	ctString := string(text)
+	classAndType := strings.Split(ctString, ":")
+	if len(classAndType) < 2 {
+		return common.NewBasicError("Could not separate SCMP ClassType string into class and type", nil,
+			"input", ctString)
+	}
+	ci := classIndex(classAndType[0])
+	if ci < 0 {
+		return common.NewBasicError("Invalid SCMP Class value", nil, "class", classAndType[0])
+	}
+	class := Class(ci)
+	ti := typeIndex(class, classAndType[1])
+	if ti < 0 {
+		return common.NewBasicError("Invalid SCMP Type value", nil, "type", classAndType[1])
+	}
+	ct.Class = class
+	ct.Type = Type(ti)
+	return nil
 }
 
 // Used to specify parts of packets to quote

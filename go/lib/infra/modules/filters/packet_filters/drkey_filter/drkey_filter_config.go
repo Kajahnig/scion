@@ -19,6 +19,7 @@ import (
 
 	"github.com/scionproto/scion/go/lib/common"
 	"github.com/scionproto/scion/go/lib/config"
+	"github.com/scionproto/scion/go/lib/scmp"
 )
 
 const drkeySample = `
@@ -26,14 +27,20 @@ const drkeySample = `
 InternalFiltering = true
 #If external packets need to be authenticated with DRKey
 ExternalFiltering = false
+#A list of SCMP ClassTypes that needs to be authenticated with DRKey
+SCMPTypesWithDRKey = [
+	"GENERAL:ECHO_REPLY",
+	"PATH:PATH_REQUIRED"
+]
 `
 
 var _ config.Config = (*DRKeyConfig)(nil)
 
 type DRKeyConfig struct {
 	config.NoDefaulter
-	InternalFiltering bool
-	ExternalFiltering bool
+	InternalFiltering  bool
+	ExternalFiltering  bool
+	SCMPTypesWithDRKey []scmp.ClassType
 }
 
 func (cfg DRKeyConfig) Validate() error {

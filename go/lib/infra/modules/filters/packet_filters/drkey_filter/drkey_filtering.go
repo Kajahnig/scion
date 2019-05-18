@@ -29,25 +29,43 @@ import (
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/packet_filters"
 	"github.com/scionproto/scion/go/lib/scmp"
 	"github.com/scionproto/scion/go/lib/snet"
-	"github.com/scionproto/scion/go/lib/spse"
 	"github.com/scionproto/scion/go/lib/spse/scmp_auth"
 )
 
 var _ packet_filters.PacketFilter = (*DRKeyFilter)(nil)
 
 type DRKeyFilter struct {
-	internalFiltering bool
-	externalFiltering bool
+	internalFiltering            bool
+	externalFiltering            bool
+	mandatoryDRKeySCMPClassTypes [][]bool
 }
 
 func NewDRKeyFilterFromConfig(cfg *DRKeyConfig) *DRKeyFilter {
+
+	matrix := make([][]bool, scmp.NumOfSCMPClasses())
+	for i := range matrix {
+		matrix[i] = make([]bool, scmp.NumOfMaxSCMPTypes())
+	}
+
+	for _, ct := range cfg.SCMPTypesWithDRKey {
+		matrix[ct.Class][ct.Type] = true
+	}
+
 	return &DRKeyFilter{
-		internalFiltering: cfg.InternalFiltering,
-		externalFiltering: cfg.ExternalFiltering,
+		internalFiltering:            cfg.InternalFiltering,
+		externalFiltering:            cfg.ExternalFiltering,
+		mandatoryDRKeySCMPClassTypes: matrix,
 	}
 }
 
 func (f *DRKeyFilter) FilterPacket(pkt *snet.SCIONPacket) (filters.FilterResult, error) {
+
+	if pkt.L4Header.L4Type() == common.L4SCMP {
+		hdr := pkt.L4Header.(*scmp.Hdr)
+		if !f.mandatoryDRKeySCMPClassTypes[hdr.Class][hdr.Type] {
+			return filters.FilterAccept, nil
+		}
+	}
 
 	dir, receivedMac, err := extractDirAndMac(pkt)
 	if err != nil {
@@ -59,16 +77,14 @@ func (f *DRKeyFilter) FilterPacket(pkt *snet.SCIONPacket) (filters.FilterResult,
 			if f.internalFiltering {
 				return filters.FilterDrop, nil
 			}
-			//we don't do internal filtering
-			return filters.FilterAccept, nil
 		} else {
 			//it is an external packet
 			if f.externalFiltering {
 				return filters.FilterDrop, nil
 			}
-			//we don't do internal filtering
-			return filters.FilterAccept, nil
 		}
+		//we don't do internal or external filtering
+		return filters.FilterAccept, nil
 	}
 
 	key, err := findDRKey(dir)
@@ -88,23 +104,15 @@ func (f *DRKeyFilter) FilterPacket(pkt *snet.SCIONPacket) (filters.FilterResult,
 }
 
 func extractDirAndMac(pkt *snet.SCIONPacket) (scmp_auth.Dir, common.RawBytes, error) {
-	var dir scmp_auth.Dir
-	var mac common.RawBytes
 	for _, ext := range pkt.Extensions {
-		if ext.Type() == common.ExtnSCIONPacketSecurityType {
-			secExt, err := ext.Pack()
-			if err != nil {
-				return scmp_auth.Dir(0), nil, err
-			}
-			secMode := spse.SecMode(secExt[0])
-			if secMode == spse.ScmpAuthDRKey {
-				dir = scmp_auth.Dir(secExt[1])
-				mac = secExt[5:]
-			}
+		switch e := ext.(type) {
+		case *scmp_auth.DRKeyExtn:
+			return e.Direction, e.MAC, nil
 		}
 	}
-	return dir, mac, nil
+	return scmp_auth.Dir(0), nil, nil
 }
+
 func calculateMac(key string, pkt *snet.SCIONPacket) (common.RawBytes, error) {
 	//TODO: replace this function when implemented
 	return nil, nil

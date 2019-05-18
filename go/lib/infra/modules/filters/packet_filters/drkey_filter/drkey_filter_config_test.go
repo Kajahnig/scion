@@ -20,6 +20,8 @@ import (
 
 	"github.com/BurntSushi/toml"
 	. "github.com/smartystreets/goconvey/convey"
+
+	"github.com/scionproto/scion/go/lib/scmp"
 )
 
 func TestDRKeyConfig_Sample(t *testing.T) {
@@ -33,6 +35,8 @@ func TestDRKeyConfig_Sample(t *testing.T) {
 
 		SoMsg("Internal setting correct", cfg.InternalFiltering, ShouldBeTrue)
 		SoMsg("External setting correct", cfg.ExternalFiltering, ShouldBeFalse)
+		SoMsg("SCMP Types correct", cfg.SCMPTypesWithDRKey, ShouldResemble,
+			[]scmp.ClassType{{Class: 0, Type: 2}, {Class: 3, Type: 0}})
 	})
 }
 
