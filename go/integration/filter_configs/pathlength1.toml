@@ -1,0 +1,8 @@
+#Test pathlength one filter
+[RequestConfigs]
+    [RequestConfigs.TRCRequest]
+    #check AS internal traffic for empty path
+    CheckInternalForEmptyPath = true
+
+    #only accept traffic from neighbours (excluding peers)
+    LimitExternalToNeighbours = true

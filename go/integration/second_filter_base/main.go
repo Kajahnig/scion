@@ -34,6 +34,7 @@ import (
 	"github.com/scionproto/scion/go/lib/infra/messenger"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters/filter_handler"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters/interval_request_limiting"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters/path_length"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters/whitelisting"
 	"github.com/scionproto/scion/go/lib/infra/transport"
 	libint "github.com/scionproto/scion/go/lib/integration"
@@ -54,6 +55,7 @@ const (
 	Pass         Result = "pass"
 	Whitelist    Result = "whitelist"
 	RequestLimit Result = "intervalRL"
+	PathLength   Result = "pathlength"
 )
 
 var (
@@ -258,6 +260,8 @@ func (c client) requestRepeatedly(rs requestSequence) int {
 				log.Error("Expected whitelisting error but got", err, infraErr)
 			} else if rs.resultType == RequestLimit && infraErr.Error() != interval_request_limiting.ErrMsg {
 				log.Error("Expected request limit error but got", err, infraErr)
+			} else if rs.resultType == PathLength && infraErr.Error() != path_length.PathLengthOneErrMsg {
+				log.Error("Expected path length error but got", err, infraErr)
 			}
 
 			if expectingError {

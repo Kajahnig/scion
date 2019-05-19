@@ -15,6 +15,7 @@ go_library(
         "//go/lib/infra/messenger:go_default_library",
         "//go/lib/infra/modules/filters/request_filters/filter_handler:go_default_library",
         "//go/lib/infra/modules/filters/request_filters/interval_request_limiting:go_default_library",
+        "//go/lib/infra/modules/filters/request_filters/path_length:go_default_library",
         "//go/lib/infra/modules/filters/request_filters/whitelisting:go_default_library",
         "//go/lib/infra/transport:go_default_library",
         "//go/lib/integration:go_default_library",
