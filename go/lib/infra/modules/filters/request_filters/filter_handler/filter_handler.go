@@ -15,12 +15,15 @@
 package filter_handler
 
 import (
+	"fmt"
+
 	"github.com/scionproto/scion/go/lib/addr"
 	"github.com/scionproto/scion/go/lib/ctrl/ack"
 	"github.com/scionproto/scion/go/lib/infra"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters/interval_request_limiting"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters/path_length"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters/whitelisting"
 	"github.com/scionproto/scion/go/lib/log"
 	"github.com/scionproto/scion/go/lib/snet"
@@ -123,12 +126,21 @@ func New(messageType infra.MessageType, originalHandler infra.Handler) infra.Han
 		if rcfg.ExternalRateLimit != Nothing {
 			eFilters = append(eFilters, newExternalRLFilter(rcfg.ExternalRateLimit))
 		}
+		if rcfg.CheckInternalForEmptyPath {
+			iFilters = append(iFilters, &path_length.EmptyPathFilter{})
+		}
+		if rcfg.LimitExternalToNeighbours {
+			eFilters = append(eFilters, &path_length.PathLengthOneFilter{})
+		}
+		log.Debug(fmt.Sprintf("Filter handler for message type %v initialized with %v internal and %v external filters",
+			messageType, len(iFilters), len(eFilters)))
 		return &FilterHandler{
 			internalFilters: iFilters,
 			externalFilters: eFilters,
 			originalHandler: originalHandler,
 		}
 	}
+	log.Debug(fmt.Sprintf("No filter handler initialized for message type %v", messageType))
 	return originalHandler
 }
 

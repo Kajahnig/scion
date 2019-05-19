@@ -50,15 +50,23 @@ InternalRateLimit = "Interval"
 
 #external (per AS) traffic rate limit setting
 ExternalRateLimit = "History"
+
+#check AS internal traffic for empty path
+CheckInternalForEmptyPath = true
+
+#only accept traffic from neighbours (excluding peers)
+LimitExternalToNeighbours = true
 `
 
 var _ config.Config = (*RequestConfig)(nil)
 
 type RequestConfig struct {
-	InternalWL        string
-	ExternalWL        string
-	InternalRateLimit string
-	ExternalRateLimit string
+	InternalWL                string
+	ExternalWL                string
+	InternalRateLimit         string
+	ExternalRateLimit         string
+	CheckInternalForEmptyPath bool
+	LimitExternalToNeighbours bool
 }
 
 func (cfg *RequestConfig) InitDefaults() {}

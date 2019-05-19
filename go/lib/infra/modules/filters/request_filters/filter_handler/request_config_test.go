@@ -37,6 +37,8 @@ func TestRequestConfig_Sample(t *testing.T) {
 		SoMsg("External WL setting correct", cfg.ExternalWL, ShouldEqual, ISDWL)
 		SoMsg("Internal rate limit setting correct", cfg.InternalRateLimit, ShouldEqual, IntervalRL)
 		SoMsg("External rate limit setting correct", cfg.ExternalRateLimit, ShouldEqual, HistoryRL)
+		SoMsg("Checking internal for empty path correct", cfg.CheckInternalForEmptyPath, ShouldBeTrue)
+		SoMsg("Limiting external to neighbours correct", cfg.LimitExternalToNeighbours, ShouldBeTrue)
 	})
 }
 

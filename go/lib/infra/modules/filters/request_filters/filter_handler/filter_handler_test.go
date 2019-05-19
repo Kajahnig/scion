@@ -25,6 +25,7 @@ import (
 	"github.com/scionproto/scion/go/lib/addr"
 	"github.com/scionproto/scion/go/lib/infra"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters/interval_request_limiting"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters/path_length"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters/whitelisting"
 )
 
@@ -47,10 +48,14 @@ func TestNew(t *testing.T) {
 				reflect.TypeOf(&whitelisting.InfraNodesFilter{}))
 			So(reflect.TypeOf(filterhandler.internalFilters[1]), ShouldEqual,
 				reflect.TypeOf(&interval_request_limiting.IntervalRequestLimitFilter{}))
+			So(reflect.TypeOf(filterhandler.internalFilters[2]), ShouldEqual,
+				reflect.TypeOf(&path_length.EmptyPathFilter{}))
 			So(reflect.TypeOf(filterhandler.externalFilters[0]), ShouldEqual,
 				reflect.TypeOf(&whitelisting.ISDFilter{}))
 			So(reflect.TypeOf(filterhandler.externalFilters[1]), ShouldEqual,
 				reflect.TypeOf(&interval_request_limiting.IntervalRequestLimitFilter{}))
+			So(reflect.TypeOf(filterhandler.externalFilters[2]), ShouldEqual,
+				reflect.TypeOf(&path_length.PathLengthOneFilter{}))
 		})
 	})
 
