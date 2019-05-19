@@ -20,7 +20,7 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 
-	"github.com/scionproto/scion/go/border/braccept/tpkt"
+	"github.com/scionproto/scion/go/lib/common"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters"
 	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/lib/spath"
@@ -256,18 +256,21 @@ func Test_FilterPacket(t *testing.T) {
 }
 
 func mkPathRevCase(in []pathCase) *spath.Path {
-	segments := make([]*tpkt.Segment, 0)
-
+	path := &spath.Path{InfOff: 0, HopOff: 0}
+	plen := 0
 	for _, seg := range in {
-		segments = append(segments, makeSeg(seg))
+		plen += spath.InfoFieldLength + len(seg.hops)*spath.HopFieldLength
 	}
-
-	path := tpkt.GenPath(0, 8, segments)
-	return &path.Path
+	path.Raw = make(common.RawBytes, plen)
+	offset := 0
+	for _, seg := range in {
+		makeSeg(path.Raw[offset:], seg)
+		offset += spath.InfoFieldLength + len(seg.hops)*spath.HopFieldLength
+	}
+	return path
 }
 
-func makeSeg(pc pathCase) *tpkt.Segment {
-
+func makeSeg(b common.RawBytes, pc pathCase) {
 	infoField := &spath.InfoField{
 		ConsDir:  false,
 		Shortcut: pc.shortcut,
@@ -276,12 +279,17 @@ func makeSeg(pc pathCase) *tpkt.Segment {
 		ISD:      1,
 		Hops:     uint8(len(pc.hops)),
 	}
+	infoField.Write(b)
+
+	for i, hop := range pc.hops {
+		hopField := makeHopField(hop)
+		hopField.Write(b[spath.InfoFieldLength+i*spath.HopFieldLength:])
+	}
+
 	hopFields := make([]*spath.HopField, 0)
 	for _, hopNr := range pc.hops {
 		hopFields = append(hopFields, makeHopField(hopNr))
 	}
-
-	return tpkt.NewSegment(infoField, hopFields)
 }
 
 func makeHopField(hopNr uint8) *spath.HopField {
