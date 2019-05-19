@@ -19,7 +19,7 @@
 //	  by this filter, as requests from the local AS go into the Internal Filter)
 //	- Neighbour Filters periodically scan the topology file and make a list of neighbouring ASes whose addresses get
 //	  accepted. Which ASes are on the list depends on the used scanner (see New methods)
-//		- Neighbour Filter: all neighbours of the local AS are on the whitelist
+//		- Neighbour Filter: all neighbours of the local AS are on the whitelist (except for peers)
 //		- Up Neighbour Filter: only directly upstream ASes of the local AS are on the list (parents)
 //		- Down Neighbour Filter: only directly downstream ASes of the local AS are on the list (children)
 //		- Core Neighbour Filter: only ASes connected with a core link to the local AS are on the list
