@@ -132,6 +132,10 @@ func New(messageType infra.MessageType, originalHandler infra.Handler) infra.Han
 		if rcfg.LimitExternalToNeighbours {
 			eFilters = append(eFilters, &path_length.PathLengthOneFilter{})
 		}
+		if rcfg.SegmentFiltering != Nothing {
+			eFilters = append(eFilters,
+				&path_length.SegmentFilter{Isd: localIA.I, IsCore: rcfg.SegmentFiltering == Core})
+		}
 		log.Debug(fmt.Sprintf("Filter handler for message type %v initialized with %v internal and %v external filters",
 			messageType, len(iFilters), len(eFilters)))
 		return &FilterHandler{

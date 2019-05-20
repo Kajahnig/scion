@@ -36,6 +36,9 @@ const (
 	//local rate limit settings
 	IntervalRL = "Interval"
 	HistoryRL  = "History"
+	//segment filter settings
+	Core    = "core"
+	NonCore = "non-core"
 )
 
 const requestConfigSample = `
@@ -55,7 +58,11 @@ ExternalRateLimit = "History"
 CheckInternalForEmptyPath = true
 
 #only accept traffic from neighbours (excluding peers)
-LimitExternalToNeighbours = true
+LimitExternalToNeighbours = false
+
+#filter number of segments for request from outside of the local ISD, 
+# as a core server (max seg length 1) or non-core server (max seg length 2)
+SegmentFiltering = "core"
 `
 
 var _ config.Config = (*RequestConfig)(nil)
@@ -67,24 +74,37 @@ type RequestConfig struct {
 	ExternalRateLimit         string
 	CheckInternalForEmptyPath bool
 	LimitExternalToNeighbours bool
+	SegmentFiltering          string
 }
 
 func (cfg *RequestConfig) InitDefaults() {}
 
 func (cfg RequestConfig) Validate() error {
 	if cfg.InternalWL != Nothing && cfg.InternalWL != DropWL && cfg.InternalWL != InfraWL {
-		return common.NewBasicError("Invalid internal whitelist setting", nil)
+		return common.NewBasicError("Invalid internal whitelist setting", nil, "setting", cfg.InternalWL)
 	}
 	if cfg.ExternalWL != Nothing && cfg.ExternalWL != DropWL && cfg.ExternalWL != ISDWL &&
 		cfg.ExternalWL != NeighboursWL && cfg.ExternalWL != UpWL && cfg.ExternalWL != DownWL &&
 		cfg.ExternalWL != CoreWL {
-		return common.NewBasicError("Invalid external whitelist setting", nil)
+		return common.NewBasicError("Invalid external whitelist setting", nil, "setting", cfg.ExternalWL)
 	}
 	if cfg.InternalRateLimit != Nothing && cfg.InternalRateLimit != IntervalRL && cfg.InternalRateLimit != HistoryRL {
-		return common.NewBasicError("Invalid internal rate limit setting", nil)
+		return common.NewBasicError("Invalid internal rate limit setting", nil,
+			"setting", cfg.InternalRateLimit)
 	}
 	if cfg.ExternalRateLimit != Nothing && cfg.ExternalRateLimit != IntervalRL && cfg.ExternalRateLimit != HistoryRL {
-		return common.NewBasicError("Invalid internal rate limit setting", nil)
+		return common.NewBasicError("Invalid internal rate limit setting", nil,
+			"setting", cfg.ExternalRateLimit)
+	}
+	if cfg.SegmentFiltering != Nothing {
+		if cfg.LimitExternalToNeighbours {
+			return common.NewBasicError("Segment filtering and neighbour filtering both set", nil)
+		}
+		if cfg.SegmentFiltering != Core && cfg.SegmentFiltering != NonCore {
+			return common.NewBasicError("Invalid segment filter setting", nil,
+				"setting", cfg.SegmentFiltering)
+		}
+
 	}
 	return nil
 }

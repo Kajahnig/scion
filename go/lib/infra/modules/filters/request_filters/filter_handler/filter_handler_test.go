@@ -55,7 +55,7 @@ func TestNew(t *testing.T) {
 			So(reflect.TypeOf(filterhandler.externalFilters[1]), ShouldEqual,
 				reflect.TypeOf(&interval_request_limiting.IntervalRequestLimitFilter{}))
 			So(reflect.TypeOf(filterhandler.externalFilters[2]), ShouldEqual,
-				reflect.TypeOf(&path_length.PathLengthOneFilter{}))
+				reflect.TypeOf(&path_length.SegmentFilter{}))
 		})
 	})
 

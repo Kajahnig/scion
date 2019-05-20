@@ -38,7 +38,8 @@ func TestRequestConfig_Sample(t *testing.T) {
 		SoMsg("Internal rate limit setting correct", cfg.InternalRateLimit, ShouldEqual, IntervalRL)
 		SoMsg("External rate limit setting correct", cfg.ExternalRateLimit, ShouldEqual, HistoryRL)
 		SoMsg("Checking internal for empty path correct", cfg.CheckInternalForEmptyPath, ShouldBeTrue)
-		SoMsg("Limiting external to neighbours correct", cfg.LimitExternalToNeighbours, ShouldBeTrue)
+		SoMsg("Limiting external to neighbours correct", cfg.LimitExternalToNeighbours, ShouldBeFalse)
+		SoMsg("Segment filter setting correct", cfg.SegmentFiltering, ShouldEqual, Core)
 	})
 }
 
@@ -61,6 +62,14 @@ func TestRequestConfig_Validate(t *testing.T) {
 			err := makeConfig(InfraWL, ISDWL, IntervalRL, "history").Validate()
 			So(err, ShouldNotBeNil)
 		})
+		Convey("Invalid value for segment filter setting ", func() {
+			err := makeConfig2(false, "invalid").Validate()
+			So(err, ShouldNotBeNil)
+		})
+		Convey("Neighbour path length filtering and segment filter set ", func() {
+			err := makeConfig2(true, Core).Validate()
+			So(err, ShouldNotBeNil)
+		})
 	})
 
 	Convey("Validation of a request config should not fail", t, func() {
@@ -78,5 +87,12 @@ func makeConfig(internalWL, externalWL, internalRL, externalRL string) *RequestC
 		ExternalWL:        externalWL,
 		InternalRateLimit: internalRL,
 		ExternalRateLimit: externalRL,
+	}
+}
+
+func makeConfig2(limitNeighbours bool, segFilterSetting string) *RequestConfig {
+	return &RequestConfig{
+		LimitExternalToNeighbours: limitNeighbours,
+		SegmentFiltering:          segFilterSetting,
 	}
 }
