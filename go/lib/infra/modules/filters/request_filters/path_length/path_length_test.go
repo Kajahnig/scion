@@ -20,8 +20,16 @@ import (
 
 	. "github.com/smartystreets/goconvey/convey"
 
+	"github.com/scionproto/scion/go/lib/addr"
 	"github.com/scionproto/scion/go/lib/common"
+	"github.com/scionproto/scion/go/lib/infra/modules/filters"
+	"github.com/scionproto/scion/go/lib/snet"
 	"github.com/scionproto/scion/go/lib/spath"
+)
+
+var (
+	IAOfLocalISD, _    = addr.IAFromString("1-ff00:0:100")
+	IAOfExternalISD, _ = addr.IAFromString("2-ff00:0:201")
 )
 
 type pathCase struct {
@@ -92,6 +100,123 @@ func TestPathLengthOneFilter_pathLengthOne(t *testing.T) {
 				Convey(fmt.Sprintf("Should return %v", c.result), func() {
 					So(err, ShouldBeNil)
 					So(isOne, ShouldEqual, c.result)
+				})
+			})
+		}
+	})
+}
+
+var oneSegPath = mkPathRevCase([]pathCase{{[]uint8{1, 2}}})
+var twoSegPath = mkPathRevCase([]pathCase{{[]uint8{1, 2}}, {[]uint8{3, 4}}})
+var threeSegPath = mkPathRevCase([]pathCase{{[]uint8{1, 2}}, {[]uint8{3, 4}},
+	{[]uint8{5, 6}}})
+
+var segLengthTests = []struct {
+	path        *spath.Path
+	result      []filters.FilterResult
+	description string
+}{
+	{
+		nil,
+		[]filters.FilterResult{
+			filters.FilterDrop, //local ISD, IsCore
+			filters.FilterDrop, //non-local ISD, IsCore
+			filters.FilterDrop, //local ISD, !IsCore
+			filters.FilterDrop, //non-local ISD, !IsCore
+		},
+		"empty",
+	},
+	{
+		oneSegPath,
+		[]filters.FilterResult{
+			filters.FilterAccept, //local ISD, IsCore
+			filters.FilterAccept, //non-local ISD, IsCore
+			filters.FilterAccept, //local ISD, !IsCore
+			filters.FilterAccept, //non-local ISD, !IsCore
+		},
+		"1 segment",
+	},
+	{
+		twoSegPath,
+		[]filters.FilterResult{
+			filters.FilterAccept, //local ISD, IsCore
+			filters.FilterDrop,   //non-local ISD, IsCore
+			filters.FilterAccept, //local ISD, !IsCore
+			filters.FilterAccept, //non-local ISD, !IsCore
+		},
+		"2 segment",
+	},
+	{
+		threeSegPath,
+		[]filters.FilterResult{
+			filters.FilterAccept, //local ISD, IsCore
+			filters.FilterDrop,   //non-local ISD, IsCore
+			filters.FilterAccept, //local ISD, !IsCore
+			filters.FilterDrop,   //non-local ISD, !IsCore
+		},
+		"3 segment",
+	},
+}
+
+func TestSegmentFilter_extractSegLen(t *testing.T) {
+	isd1, _ := addr.ISDFromString("1")
+
+	Convey("Filtering on a segment filter for core servers", t, func() {
+
+		filter := &SegmentFilter{isd1, true}
+
+		for _, c := range segLengthTests {
+
+			localISDAddr := snet.Addr{IA: IAOfLocalISD, Path: c.path}
+			externalISDAddr := snet.Addr{IA: IAOfExternalISD, Path: c.path}
+
+			Convey(fmt.Sprintf("A %v path", c.description), func() {
+
+				result1, err1 := filter.FilterExternal(localISDAddr)
+				result2, err2 := filter.FilterExternal(externalISDAddr)
+
+				Convey(fmt.Sprintf("Should return %v, if it is from the local ISD",
+					c.result[0].ToString()), func() {
+
+					So(err1, ShouldBeNil)
+					So(result1, ShouldEqual, c.result[0])
+				})
+
+				Convey(fmt.Sprintf("Should return %v, if it is from outside of the local ISD",
+					c.result[1].ToString()), func() {
+
+					So(err2, ShouldBeNil)
+					So(result2, ShouldEqual, c.result[1])
+				})
+			})
+		}
+	})
+
+	Convey("Filtering on a segment filter for non-core servers", t, func() {
+		filter := &SegmentFilter{isd1, false}
+
+		for _, c := range segLengthTests {
+
+			localISDAddr := snet.Addr{IA: IAOfLocalISD, Path: c.path}
+			externalISDAddr := snet.Addr{IA: IAOfExternalISD, Path: c.path}
+
+			Convey(fmt.Sprintf("A %v path", c.description), func() {
+
+				result1, err1 := filter.FilterExternal(localISDAddr)
+				result2, err2 := filter.FilterExternal(externalISDAddr)
+
+				Convey(fmt.Sprintf("Should return %v, if it is from the local ISD",
+					c.result[2].ToString()), func() {
+
+					So(err1, ShouldBeNil)
+					So(result1, ShouldEqual, c.result[2])
+				})
+
+				Convey(fmt.Sprintf("Should return %v, if it is from outside of the local ISD",
+					c.result[3].ToString()), func() {
+
+					So(err2, ShouldBeNil)
+					So(result2, ShouldEqual, c.result[3])
 				})
 			})
 		}
