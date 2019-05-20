@@ -56,6 +56,7 @@ const (
 	Whitelist    Result = "whitelist"
 	RequestLimit Result = "intervalRL"
 	PathLength   Result = "pathlength"
+	SegLength    Result = "seglength"
 )
 
 var (
@@ -262,6 +263,8 @@ func (c client) requestRepeatedly(rs requestSequence) int {
 				log.Error("Expected request limit error but got", err, infraErr)
 			} else if rs.resultType == PathLength && infraErr.Error() != path_length.PathLengthOneErrMsg {
 				log.Error("Expected path length error but got", err, infraErr)
+			} else if rs.resultType == SegLength && infraErr.Error() != path_length.SegmentNumErrMsg {
+				log.Error("Expected segment length error but got", err, infraErr)
 			}
 
 			if expectingError {

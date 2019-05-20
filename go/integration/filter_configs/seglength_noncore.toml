@@ -1,0 +1,4 @@
+#Test segment length filter for non-core servers
+[RequestConfigs]
+    [RequestConfigs.TRCRequest]
+    SegmentFiltering = "non-core"

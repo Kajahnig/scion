@@ -1,0 +1,9 @@
+//results for the default topology with the config filter_configs/seglength_core
+//client        server          request         result
+1-ff00:0:110    1-ff00:0:120    TRCRequest      pass
+1-ff00:0:130    1-ff00:0:120    TRCRequest      pass
+1-ff00:0:133    1-ff00:0:120    TRCRequest      pass
+2-ff00:0:210    1-ff00:0:120    TRCRequest      pass
+2-ff00:0:211    1-ff00:0:120    TRCRequest      seglength
+2-ff00:0:220    1-ff00:0:120    TRCRequest      pass
+2-ff00:0:221    1-ff00:0:120    TRCRequest      seglength
