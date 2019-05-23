@@ -1,5 +1,0 @@
-#A path length filter config for performance tests
-[pathlength]
-AllowEmptyPaths = true
-MinPathLength = 1
-MaxPathLength = 1000

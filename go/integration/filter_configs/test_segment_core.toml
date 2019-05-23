@@ -1,0 +1,7 @@
+#Test segment length filter for core servers
+[RequestConfigs]
+    [RequestConfigs.TRCRequest]
+    SegmentFiltering = "core"
+
+    [RequestConfigs.ChainRequest]
+    SegmentFiltering = "core"

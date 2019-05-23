@@ -1,0 +1,7 @@
+#Test pathlength one filter
+[RequestConfigs]
+    [RequestConfigs.TRCRequest]
+    CheckInternalForEmptyPath = true
+
+    [RequestConfigs.ChainRequest]
+    CheckInternalForEmptyPath = true

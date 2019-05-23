@@ -1,0 +1,7 @@
+#Test pathlength one filter
+[RequestConfigs]
+    [RequestConfigs.TRCRequest]
+    LimitExternalToNeighbours = true
+
+    [RequestConfigs.ChainRequest]
+    LimitExternalToNeighbours = true
