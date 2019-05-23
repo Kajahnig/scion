@@ -27,13 +27,15 @@ import (
 
 var (
 	name         = "test_runner_"
-	cmd          = "./bin/test_server_and_client"
+	cmd          = "./bin/"
+	standardName = "test_server_and_client"
 	dstASList    = "1-ff00:0:120"
 	topoFilePath = "./filter_topos/"
 
 	runWithInfra        bool
 	baseline            string
 	sleepTime           int
+	binaryName          string
 	requestFilterConfig string
 	packetFilterConfig  string
 	topoFileName        string
@@ -42,10 +44,12 @@ var (
 func addFlags() {
 	flag.BoolVar(&runWithInfra, "infra", false, "whether the server should run with the infra (default false)")
 	flag.IntVar(&sleepTime, "time", 20, "How long the server should run (seconds)")
+	flag.StringVar(&binaryName, "bin", "",
+		"Name of the binary that should be used as a prefix to 'test_server_and_client'")
 	flag.StringVar(&requestFilterConfig, "rfConfig", "",
 		"(Mandatory for servers) Name of the request filter configuration in ./go/integration/filter_configs")
-	flag.StringVar(&packetFilterConfig, "pfConfig", "",
-		"(Mandatory for servers) Name of the packet filter configuration in ./go/integration/filter_configs")
+	//flag.StringVar(&packetFilterConfig, "pfConfig", "",
+	//"(Mandatory for servers) Name of the packet filter configuration in ./go/integration/filter_configs")
 	flag.StringVar(&topoFileName, "topo", "default_topology",
 		"(Mandatory for servers) Name of the topology file in ./filter_topos")
 }
@@ -71,7 +75,7 @@ func realMain() int {
 			"-local", integration.DstAddrPattern + ":12345",
 			"-mode", "server",
 			"-log.console", "debug",
-			"-pfConfig", packetFilterConfig,
+			//"-pfConfig", packetFilterConfig,
 			"-rfConfig", requestFilterConfig,
 			"-topoFilePath", topoFilePath + topoFileName + ".json",
 		}
@@ -81,12 +85,12 @@ func realMain() int {
 			"-mode", "server",
 			"-sciond", "/run/shm/sciond/1-ff00_0_120.sock",
 			"-log.console", "debug",
-			"-pfConfig", packetFilterConfig,
+			//"-pfConfig", packetFilterConfig,
 			"-rfConfig", requestFilterConfig,
 			"-topoFilePath", topoFilePath + topoFileName + ".json",
 		}
 	}
-	in := integration.NewBinaryIntegration(intTestName, cmd, []string{}, serverArgs)
+	in := integration.NewBinaryIntegration(intTestName, cmd+binaryName+standardName, []string{}, serverArgs)
 	if err := runTests(in, integration.IAPairs(integration.DispAddr)); err != nil {
 		log.Error("Error during tests: " + err.Error())
 		return 1
