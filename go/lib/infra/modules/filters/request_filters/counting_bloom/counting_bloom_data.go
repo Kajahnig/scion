@@ -15,8 +15,8 @@
 package counting_bloom
 
 type cbfData interface {
-	getMinimum(locations []uint32) (minLocations []uint32, minValue uint32)
-	increaseLocations(minLocations []uint32)
+	getMinimum(locations []int) (minLocations []int, minValue int)
+	increaseLocations(minLocations []int)
 	reset()
 }
 
@@ -26,46 +26,30 @@ type cbfData8 struct {
 	data []uint8
 }
 
-func (c *cbfData8) getMinimum(locations []uint32) ([]uint32, uint32) {
-	values := make([]uint8, len(locations))
+func (c *cbfData8) getMinimum(locations []int) (minLocations []int, minValue int) {
 
-	var minValue = c.data[locations[0]]
-	values[0] = minValue
-	var counter = 1
+	minLocations = make([]int, 1, len(locations))
+	minLocations[0] = locations[0]
 
-	for i, location := range locations[1:] {
+	minVal := c.data[locations[0]]
+
+	for _, location := range locations[1:] {
 		value := c.data[location]
-		if value < minValue {
-			minValue = value
-			counter = 1
-		} else if value == minValue {
-			counter++
-		}
-		values[i+1] = value
-	}
-
-	minLocations := make([]uint32, counter)
-
-	for i, value := range values {
-		if value == minValue {
-			minLocations[counter-1] = locations[i]
-			counter--
+		if value < minVal {
+			minVal = value
+			minLocations = minLocations[len(minLocations):]
+			minLocations = append(minLocations, location)
+		} else if value == minVal {
+			minLocations = append(minLocations, location)
 		}
 	}
-	return minLocations, uint32(minValue)
+
+	return minLocations, int(minVal)
 }
 
-func (c *cbfData8) increaseLocations(minLocations []uint32) {
-	for i, location := range minLocations {
-		alreadyIncreased := false
-		for _, prevLocation := range minLocations[:i] {
-			if prevLocation == location {
-				alreadyIncreased = true
-			}
-		}
-		if !alreadyIncreased {
-			c.data[location] += 1
-		}
+func (c *cbfData8) increaseLocations(minLocations []int) {
+	for _, location := range minLocations {
+		c.data[location] += 1
 	}
 }
 
@@ -81,46 +65,30 @@ type cbfData16 struct {
 	data []uint16
 }
 
-func (c *cbfData16) getMinimum(locations []uint32) ([]uint32, uint32) {
-	values := make([]uint16, len(locations))
+func (c *cbfData16) getMinimum(locations []int) (minLocations []int, minValue int) {
+	minLocations = make([]int, 1, len(locations))
+	minLocations[0] = locations[0]
 
-	var minValue = c.data[locations[0]]
-	values[0] = minValue
-	var counter = 1
+	minVal := c.data[locations[0]]
 
-	for i, location := range locations[1:] {
+	for _, location := range locations[1:] {
 		value := c.data[location]
-		if value < minValue {
-			minValue = value
-			counter = 1
-		} else if value == minValue {
-			counter++
-		}
-		values[i+1] = value
-	}
-
-	minLocations := make([]uint32, counter)
-
-	for i, value := range values {
-		if value == minValue {
-			minLocations[counter-1] = locations[i]
-			counter--
+		if value < minVal {
+			minVal = value
+			minLocations = minLocations[len(minLocations):]
+			minLocations = append(minLocations, location)
+		} else if value == minVal {
+			minLocations = append(minLocations, location)
 		}
 	}
-	return minLocations, uint32(minValue)
+
+	return minLocations, int(minVal)
+
 }
 
-func (c *cbfData16) increaseLocations(minLocations []uint32) {
-	for i, location := range minLocations {
-		alreadyIncreased := false
-		for _, prevLocation := range minLocations[:i] {
-			if prevLocation == location {
-				alreadyIncreased = true
-			}
-		}
-		if !alreadyIncreased {
-			c.data[location] += 1
-		}
+func (c *cbfData16) increaseLocations(minLocations []int) {
+	for _, location := range minLocations {
+		c.data[location] += 1
 	}
 }
 

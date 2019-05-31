@@ -76,10 +76,7 @@ func TestRateLimitFilter_filterFromConfig(t *testing.T) {
 		})
 
 		Convey("Should initialize the fields with the correct values", func() {
-			So(filter.maxValue, ShouldEqual, 20)
-			So(filter.numCells, ShouldEqual, 48)
-			So(filter.numHashFunc, ShouldEqual, 3)
-			So(filter.filter, ShouldNotBeNil)
+			So(filter.filters, ShouldNotBeNil)
 		})
 	})
 

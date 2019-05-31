@@ -15,7 +15,7 @@
 package counting_bloom
 
 import (
-	"hash"
+	"sort"
 	"sync"
 
 	"github.com/pierrec/xxHash/xxHash32"
@@ -24,22 +24,20 @@ import (
 )
 
 type CBF struct {
-	numCells     uint32
-	filter1      cbfData
-	filter2      cbfData
-	usingFilter1 bool
-	cbfDataMutex sync.Mutex
-	resetMutex   sync.Mutex
+	counterArray cbfData
+	//For high numbers of cells, this is very wasteful in terms of memory usage.
+	//Could be adapted by introducing a configurable locking factor (how many cells are locked with each other)
+	counterLocks []sync.Mutex
 
+	numCells  uint32
 	numHashes uint32
-	hash1     hash.Hash32
-	hash2     hash.Hash32
-	hashMutex sync.Mutex
+	maxValue  int
 
-	maxValue uint32
+	hash1 uint32
+	hash2 uint32
 }
 
-func NewCBF(numCells uint32, numHashes uint32, maxValue uint32) (*CBF, error) {
+func NewCBF(numCells uint32, numHashes uint32, maxValue int) (*CBF, error) {
 	if numCells == 0 {
 		return nil, common.NewBasicError("Can not instantiate CBF with 0 cells", nil)
 	} else if numHashes == 0 {
@@ -50,106 +48,104 @@ func NewCBF(numCells uint32, numHashes uint32, maxValue uint32) (*CBF, error) {
 		return nil, common.NewBasicError("Can not instantiate CBF with a maximum value bigger than 16 bit", nil)
 	}
 
-	var data1, data2 cbfData
+	var data1 cbfData
 	if maxValue > 255 {
 		data1 = &cbfData16{data: make([]uint16, numCells)}
-		data2 = &cbfData16{data: make([]uint16, numCells)}
 	} else {
 		data1 = &cbfData8{data: make([]uint8, numCells)}
-		data2 = &cbfData8{data: make([]uint8, numCells)}
 	}
 
+	counterLocks := make([]sync.Mutex, numCells)
+
 	return &CBF{
+		counterArray: data1,
+		counterLocks: counterLocks,
 		numCells:     numCells,
-		filter1:      data1,
-		filter2:      data2,
-		usingFilter1: true,
 		numHashes:    numHashes,
-		hash1:        xxHash32.New(uint32(scrypto.RandUint64() >> 32)),
-		hash2:        xxHash32.New(uint32(scrypto.RandUint64() >> 32)),
 		maxValue:     maxValue,
+		hash1:        uint32(scrypto.RandUint64() >> 32),
+		hash2:        uint32(scrypto.RandUint64() >> 32),
 	}, nil
 }
 
 func (cbf *CBF) CheckIfRateLimitExceeded(key []byte) (bool, error) {
-	cbf.hashMutex.Lock()
 	h1, h2, err := cbf.getHashes(key)
 
 	if err != nil {
-		cbf.hashMutex.Unlock()
 		return false, err
 	}
-	cbf.cbfDataMutex.Lock()
-	defer cbf.cbfDataMutex.Unlock()
-	cbf.hashMutex.Unlock()
 
-	locations := make([]uint32, cbf.numHashes)
+	locations := cbf.getDistinctHashLocations(h1, h2)
+	sort.Ints(locations)
 
-	var i uint32
-	for i = 0; i < cbf.numHashes; i++ {
-		locations[i] = (h1 + i*h2) % cbf.numCells
-	}
+	//lock the locations in increasing order.
+	cbf.lockHashLocations(locations)
+	//defer unlocking the locations
+	defer cbf.unlockHashLocations(locations)
 
-	var minLocations []uint32
-	var minValue uint32
-	if cbf.usingFilter1 {
-		minLocations, minValue = cbf.filter1.getMinimum(locations)
-	} else {
-		minLocations, minValue = cbf.filter2.getMinimum(locations)
-	}
+	minLocations, minValue := cbf.counterArray.getMinimum(locations)
 
 	if minValue >= cbf.maxValue {
 		return true, nil
 	}
 
-	if cbf.usingFilter1 {
-		cbf.filter1.increaseLocations(minLocations)
-	} else {
-		cbf.filter2.increaseLocations(minLocations)
-	}
+	cbf.counterArray.increaseLocations(minLocations)
 	return false, nil
 }
 
-func (cbf *CBF) Reset() {
-	cbf.resetMutex.Lock()
-	cbf.hashMutex.Lock()
-	defer cbf.hashMutex.Unlock()
-	cbf.cbfDataMutex.Lock()
-	defer cbf.cbfDataMutex.Unlock()
+func (cbf CBF) getHashes(key []byte) (uint32, uint32, error) {
+	hashfunc1 := xxHash32.New(cbf.hash1)
+	hashfunc2 := xxHash32.New(cbf.hash2)
 
-	cbf.hash1 = xxHash32.New(uint32(scrypto.RandUint64() >> 32))
-	cbf.hash2 = xxHash32.New(uint32(scrypto.RandUint64() >> 32))
+	_, err := hashfunc1.Write(key)
+	if err != nil {
+		return 0, 0, err
+	}
+	_, err = hashfunc2.Write(key)
+	if err != nil {
+		return 0, 0, err
+	}
 
-	if cbf.usingFilter1 {
-		cbf.usingFilter1 = false
-		go func() {
-			cbf.filter1.reset()
-			cbf.resetMutex.Unlock()
-		}()
-	} else {
-		cbf.usingFilter1 = true
-		go func() {
-			cbf.filter2.reset()
-			cbf.resetMutex.Unlock()
-		}()
+	h1 := hashfunc1.Sum32()
+	h2 := hashfunc2.Sum32()
+
+	return h1, h2, nil
+}
+
+func (cbf CBF) getDistinctHashLocations(h1, h2 uint32) []int {
+	locations := make([]int, 0)
+
+	for i := uint32(0); i < cbf.numHashes; i++ {
+		possibleLocation := int((h1 + i*h2) % cbf.numCells)
+		contains := false
+		for _, loc := range locations {
+			if loc == possibleLocation {
+				contains = true
+			}
+		}
+		if !contains {
+			locations = append(locations, possibleLocation)
+		}
+	}
+	return locations
+}
+
+func (cbf *CBF) lockHashLocations(locations []int) {
+	for _, loc := range locations {
+		cbf.counterLocks[loc].Lock()
 	}
 }
 
-//only execute this when you have the hashLock
-func (cbf *CBF) getHashes(key []byte) (uint32, uint32, error) {
-	_, err := cbf.hash1.Write(key)
-	if err != nil {
-		return 0, 0, err
+func (cbf *CBF) unlockHashLocations(locations []int) {
+	for i := len(locations) - 1; i >= 0; i-- {
+		cbf.counterLocks[locations[i]].Unlock()
 	}
-	_, err = cbf.hash2.Write(key)
-	if err != nil {
-		return 0, 0, err
-	}
+}
 
-	h1 := cbf.hash1.Sum32()
-	h2 := cbf.hash2.Sum32()
-	cbf.hash1.Reset()
-	cbf.hash2.Reset()
+//this function should only be called if the whole data structure is locked for queries
+func (cbf *CBF) Reset() {
+	cbf.hash1 = uint32(scrypto.RandUint64() >> 32)
+	cbf.hash2 = uint32(scrypto.RandUint64() >> 32)
 
-	return h1, h2, nil
+	cbf.counterArray.reset()
 }

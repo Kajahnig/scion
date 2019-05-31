@@ -30,6 +30,7 @@ package interval_request_limiting
 import (
 	"context"
 	"math"
+	"sync"
 
 	"github.com/scionproto/scion/go/lib/infra/modules/filters"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/request_filters"
@@ -44,10 +45,13 @@ var _ request_filters.InternalFilter = (*IntervalRequestLimitFilter)(nil)
 var _ request_filters.ExternalFilter = (*IntervalRequestLimitFilter)(nil)
 
 type IntervalRequestLimitFilter struct {
-	filter      *counting_bloom.CBF
-	numCells    uint32
-	numHashFunc uint32
-	maxValue    uint32
+	filters []*counting_bloom.CBF
+	//We use this mutex for resetting synchronization
+	//A readlock on the mutex of the specific filter means Queries are in progress
+	//In order to reset, the resetting routine must aquire a write lock on that filter mutex
+	filterMutexes []sync.RWMutex
+
+	filterInUse uint8
 }
 
 func (f *IntervalRequestLimitFilter) FilterInternal(addr snet.Addr) (filters.FilterResult, error) {
@@ -65,7 +69,12 @@ func (f *IntervalRequestLimitFilter) ErrorMessage() string {
 }
 
 func (f *IntervalRequestLimitFilter) checkLimit(addr []byte) (filters.FilterResult, error) {
-	rateLimitExceeded, err := f.filter.CheckIfRateLimitExceeded(addr)
+	filterInUse := f.filterInUse
+	f.filterMutexes[filterInUse].RLock()
+	defer f.filterMutexes[filterInUse].RUnlock()
+
+	rateLimitExceeded, err := f.filters[filterInUse].CheckIfRateLimitExceeded(addr)
+
 	if err != nil {
 		return filters.FilterError, err
 	}
@@ -81,19 +90,26 @@ func FilterFromConfig(cfg *RateLimitConfig) (*IntervalRequestLimitFilter, error)
 	}
 
 	numCells, numHashFunc := calculateOptimalParameters(float64(cfg.NumOfClients))
-	maxValue := uint32(cfg.MaxCount)
+	maxValue := cfg.MaxCount
 
-	CBF, err := counting_bloom.NewCBF(numCells, numHashFunc, maxValue)
-	if err != nil {
-		return nil, err
+	fltrs := make([]*counting_bloom.CBF, 4)
+
+	for i := 0; i < 4; i++ {
+		CBF, _ := counting_bloom.NewCBF(numCells, numHashFunc, maxValue)
+		fltrs[i] = CBF
 	}
 
-	filter := &IntervalRequestLimitFilter{CBF, numCells, numHashFunc, maxValue}
+	mutexes := make([]sync.RWMutex, 4)
+
+	filter := &IntervalRequestLimitFilter{
+		filters:       fltrs,
+		filterMutexes: mutexes,
+	}
 
 	periodic.StartPeriodicTask(
-		&FilterResetter{filter.filter},
+		&FilterResetter{filter},
 		periodic.NewTicker(cfg.Interval.Duration),
-		cfg.Interval.Duration)
+		2*cfg.Interval.Duration)
 
 	return filter, nil
 }
@@ -114,9 +130,24 @@ func calculateOptimalParameters(numOfElementsToCount float64) (uint32, uint32) {
 }
 
 type FilterResetter struct {
-	filter *counting_bloom.CBF
+	filter *IntervalRequestLimitFilter
 }
 
+//This function advances the filter in use to the next one and triggers a resetting procedure
+//for the previous filter. (Not for the 'filterInUse' as this could lead to race conditions if
+//checkLimit reads the 'filterInUse' value and then wants to aquire a read lock,
+//but no new readlocks are allowed because the resetting procedure already required a writelock)
 func (f *FilterResetter) Run(ctx context.Context) {
-	f.filter.Reset()
+	filterInUse := f.filter.filterInUse
+	nextFilter := (filterInUse + 1) % 4
+	f.filter.filterInUse = nextFilter
+
+	filterToReset := (filterInUse - 1) % 4
+
+	go func() {
+		f.filter.filterMutexes[filterToReset].Lock()
+		defer f.filter.filterMutexes[filterToReset].Unlock()
+
+		f.filter.filters[filterToReset].Reset()
+	}()
 }

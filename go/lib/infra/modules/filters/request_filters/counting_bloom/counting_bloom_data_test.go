@@ -26,16 +26,15 @@ func TestCBFData8_GetMinimum(t *testing.T) {
 	Convey("Getting the minimum out of", t, func() {
 		tests := []struct {
 			data                  []uint8
-			locationsToChooseFrom []uint32
-			minLocations          []uint32
-			minValue              uint32
+			locationsToChooseFrom []int
+			minLocations          []int
+			minValue              int
 		}{
-			{[]uint8{3}, []uint32{0}, []uint32{0}, 3},
-			{[]uint8{1, 2, 3, 4, 5}, []uint32{3, 1, 0}, []uint32{0}, 1},
-			{[]uint8{1, 2, 0, 4, 5}, []uint32{0, 0, 0}, []uint32{0, 0, 0}, 1},
-			{[]uint8{1, 0, 5, 9, 1, 0, 0}, []uint32{3, 6, 1, 4}, []uint32{1, 6}, 0},
-			{[]uint8{0, 0, 7, 1, 8, 0, 2, 0, 12}, []uint32{8, 6, 3, 4, 2}, []uint32{3}, 1},
-			{[]uint8{0, 0, 7, 1, 8, 0, 2, 0, 13}, []uint32{0, 8, 1, 6, 7, 3, 5, 4, 2}, []uint32{5, 7, 1, 0}, 0},
+			{[]uint8{3}, []int{0}, []int{0}, 3},
+			{[]uint8{1, 2, 3, 4, 5}, []int{0, 1, 3}, []int{0}, 1},
+			{[]uint8{1, 0, 5, 9, 1, 0, 0}, []int{1, 3, 4, 6}, []int{1, 6}, 0},
+			{[]uint8{0, 0, 7, 1, 8, 0, 2, 0, 12}, []int{2, 3, 4, 6, 8}, []int{3}, 1},
+			{[]uint8{0, 0, 7, 1, 8, 0, 2, 0, 13}, []int{0, 1, 2, 3, 4, 5, 6, 7, 8}, []int{0, 1, 5, 7}, 0},
 		}
 
 		for _, test := range tests {
@@ -63,19 +62,20 @@ func TestCBFData8_IncreaseLocations(t *testing.T) {
 	Convey("Increasing the values ", t, func() {
 		tests := []struct {
 			data                []uint8
-			locationsToIncrease []uint32
+			locationsToIncrease []int
 			expectedDataState   []uint8
 		}{
 			{[]uint8{3},
-				[]uint32{0},
+				[]int{0},
 				[]uint8{4}},
 			{[]uint8{1, 2, 3, 4, 5},
-				[]uint32{3, 1, 0},
+				[]int{0, 1, 3},
 				[]uint8{2, 3, 3, 5, 5}},
-			{[]uint8{1, 2, 0, 4, 5}, []uint32{0, 0, 0},
+			{[]uint8{1, 2, 0, 4, 5},
+				[]int{0},
 				[]uint8{2, 2, 0, 4, 5}},
 			{[]uint8{1, 0, 5, 9, 1, 0, 0},
-				[]uint32{3, 6, 1, 4, 1, 3, 1},
+				[]int{1, 3, 4, 6},
 				[]uint8{1, 1, 5, 10, 2, 0, 1}},
 		}
 
@@ -130,16 +130,16 @@ func TestCBFData16_GetMinimum(t *testing.T) {
 	Convey("Getting the minimum out of", t, func() {
 		tests := []struct {
 			data                  []uint16
-			locationsToChooseFrom []uint32
-			minLocations          []uint32
-			minValue              uint32
+			locationsToChooseFrom []int
+			minLocations          []int
+			minValue              int
 		}{
-			{[]uint16{3}, []uint32{0}, []uint32{0}, 3},
-			{[]uint16{1, 2, 3, 4, 5}, []uint32{3, 1, 0}, []uint32{0}, 1},
-			{[]uint16{1, 2, 0, 4, 5}, []uint32{0, 0, 0}, []uint32{0, 0, 0}, 1},
-			{[]uint16{1, 0, 5, 9, 1, 0, 0}, []uint32{3, 6, 1, 4}, []uint32{1, 6}, 0},
-			{[]uint16{0, 0, 7, 1, 8, 0, 2, 0, 12}, []uint32{8, 6, 3, 4, 2}, []uint32{3}, 1},
-			{[]uint16{0, 0, 7, 1, 8, 0, 2, 0, 13}, []uint32{0, 8, 1, 6, 7, 3, 5, 4, 2}, []uint32{5, 7, 1, 0}, 0},
+			{[]uint16{3}, []int{0}, []int{0}, 3},
+			{[]uint16{1, 2, 3, 4, 5}, []int{0, 1, 3}, []int{0}, 1},
+			{[]uint16{1, 2, 0, 4, 5}, []int{0}, []int{0}, 1},
+			{[]uint16{1, 0, 5, 9, 1, 0, 0}, []int{1, 3, 4, 6}, []int{1, 6}, 0},
+			{[]uint16{0, 0, 7, 1, 8, 0, 2, 0, 12}, []int{2, 3, 4, 6, 8}, []int{3}, 1},
+			{[]uint16{0, 0, 7, 1, 8, 0, 2, 0, 13}, []int{0, 1, 2, 3, 4, 5, 6, 7, 8}, []int{0, 1, 5, 7}, 0},
 		}
 
 		for _, test := range tests {
@@ -167,19 +167,20 @@ func TestCBFData16_IncreaseLocations(t *testing.T) {
 	Convey("Increasing the values ", t, func() {
 		tests := []struct {
 			data                []uint16
-			locationsToIncrease []uint32
+			locationsToIncrease []int
 			expectedDataState   []uint16
 		}{
 			{[]uint16{3},
-				[]uint32{0},
+				[]int{0},
 				[]uint16{4}},
 			{[]uint16{1, 2, 3, 4, 5},
-				[]uint32{3, 1, 0},
+				[]int{0, 1, 3},
 				[]uint16{2, 3, 3, 5, 5}},
-			{[]uint16{1, 2, 0, 4, 5}, []uint32{0, 0, 0},
+			{[]uint16{1, 2, 0, 4, 5},
+				[]int{0},
 				[]uint16{2, 2, 0, 4, 5}},
 			{[]uint16{1, 0, 5, 9, 1, 0, 0},
-				[]uint32{3, 6, 1, 4, 1, 3, 1},
+				[]int{1, 3, 4, 6},
 				[]uint16{1, 1, 5, 10, 2, 0, 1}},
 		}
 

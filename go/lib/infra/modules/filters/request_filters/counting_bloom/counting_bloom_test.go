@@ -29,7 +29,7 @@ func TestNewCBF(t *testing.T) {
 			explanation string
 			numCells    uint32
 			numHashes   uint32
-			maxValue    uint32
+			maxValue    int
 		}{
 			{"0 cells",
 				0, 2, 3},
@@ -52,7 +52,7 @@ func TestNewCBF(t *testing.T) {
 			})
 		}
 		tests := []struct {
-			maxValue    uint32
+			maxValue    int
 			cbfDataType reflect.Type
 			typeString  string
 		}{
@@ -70,8 +70,7 @@ func TestNewCBF(t *testing.T) {
 				})
 
 				Convey(fmt.Sprintf("Should return a CBF with %v bit cbfData", test.typeString), func() {
-					So(reflect.TypeOf(cbf.filter1), ShouldEqual, test.cbfDataType)
-					So(reflect.TypeOf(cbf.filter2), ShouldEqual, test.cbfDataType)
+					So(reflect.TypeOf(cbf.counterArray), ShouldEqual, test.cbfDataType)
 				})
 			})
 		}
@@ -120,6 +119,7 @@ func TestCBF_CheckIfRateLimitExceeded(t *testing.T) {
 		answer5, err5 := cbf.CheckIfRateLimitExceeded([]byte("key1"))
 
 		Convey("Adding key1 and key2 twice, and key3 once should always return false and no error", func() {
+
 			So(err1, ShouldBeNil)
 			So(err2, ShouldBeNil)
 			So(err3, ShouldBeNil)
