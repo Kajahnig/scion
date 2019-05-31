@@ -7,7 +7,9 @@ go_library(
     visibility = ["//visibility:private"],
     deps = [
         "//go/integration:go_default_library",
+        "//go/lib/common:go_default_library",
         "//go/lib/ctrl/cert_mgmt:go_default_library",
+        "//go/lib/ctrl/path_mgmt:go_default_library",
         "//go/lib/infra:go_default_library",
         "//go/lib/infra/disp:go_default_library",
         "//go/lib/infra/messenger:go_default_library",
