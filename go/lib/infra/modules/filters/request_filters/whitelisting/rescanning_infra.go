@@ -41,24 +41,24 @@ func (s *InfraNodesScanner) Run(ctx context.Context) {
 		return
 	}
 
-	newList := map[string]bool{}
+	newList := map[string]struct{}{}
 
 	for _, idAddrMap := range []topology.IDAddrMap{topo.DS, topo.BS, topo.CS, topo.PS, topo.SB, topo.RS, topo.SIG} {
 		for _, topoAddr := range idAddrMap {
 			if topoAddr.Overlay.IsIPv4() {
-				newList[topoAddr.IPv4.PublicAddr().L3.String()] = true
+				newList[topoAddr.IPv4.PublicAddr().L3.String()] = struct{}{}
 			}
 			if topoAddr.Overlay.IsIPv6() {
-				newList[topoAddr.IPv6.PublicAddr().L3.String()] = true
+				newList[topoAddr.IPv6.PublicAddr().L3.String()] = struct{}{}
 			}
 		}
 	}
 	for _, topoAddr := range topo.BR {
 		if topoAddr.InternalAddrs.Overlay.IsIPv4() {
-			newList[topoAddr.InternalAddrs.IPv4.PublicOverlay.L3().String()] = true
+			newList[topoAddr.InternalAddrs.IPv4.PublicOverlay.L3().String()] = struct{}{}
 		}
 		if topoAddr.InternalAddrs.Overlay.IsIPv6() {
-			newList[topoAddr.InternalAddrs.IPv6.PublicOverlay.L3().String()] = true
+			newList[topoAddr.InternalAddrs.IPv6.PublicOverlay.L3().String()] = struct{}{}
 		}
 	}
 

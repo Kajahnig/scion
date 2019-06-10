@@ -59,7 +59,7 @@ func (f *ISDFilter) ErrorMessage() string {
 var _ request_filters.ExternalFilter = (*ISDFilter)(nil)
 
 type NeighbourFilter struct {
-	Neighbours map[addr.IA]bool
+	Neighbours map[addr.IA]struct{}
 	Lock       sync.RWMutex
 }
 

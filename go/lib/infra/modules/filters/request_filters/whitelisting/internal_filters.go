@@ -38,7 +38,7 @@ import (
 var _ request_filters.InternalFilter = (*InfraNodesFilter)(nil)
 
 type InfraNodesFilter struct {
-	InfraNodes map[string]bool
+	InfraNodes map[string]struct{}
 	Lock       sync.RWMutex
 }
 

@@ -37,7 +37,7 @@ func TestNewInfraNodesFilter(t *testing.T) {
 
 func TestInfraNodesFilter_FilterPacket(t *testing.T) {
 	filter := &InfraNodesFilter{
-		InfraNodes: map[string]bool{otherHostAddr.String(): true},
+		InfraNodes: map[string]struct{}{otherHostAddr.String(): {}},
 	}
 
 	Convey("An infra nodes filter", t, func() {

@@ -32,11 +32,11 @@ func (f *NeighbourScanner) Run(ctx context.Context) {
 		return
 	}
 
-	newList := map[addr.IA]bool{}
+	newList := map[addr.IA]struct{}{}
 
 	for _, interf := range topo.IFInfoMap {
 		if interf.LinkType != proto.LinkType_peer {
-			newList[interf.ISD_AS] = true
+			newList[interf.ISD_AS] = struct{}{}
 		}
 	}
 
@@ -57,11 +57,11 @@ func (f *UpNeighbourScanner) Run(ctx context.Context) {
 		return
 	}
 
-	newList := map[addr.IA]bool{}
+	newList := map[addr.IA]struct{}{}
 
 	for _, interf := range topo.IFInfoMap {
 		if interf.LinkType == proto.LinkType_parent {
-			newList[interf.ISD_AS] = true
+			newList[interf.ISD_AS] = struct{}{}
 		}
 	}
 
@@ -82,11 +82,11 @@ func (f *DownNeighbourScanner) Run(ctx context.Context) {
 		return
 	}
 
-	newList := map[addr.IA]bool{}
+	newList := map[addr.IA]struct{}{}
 
 	for _, interf := range topo.IFInfoMap {
 		if interf.LinkType == proto.LinkType_child {
-			newList[interf.ISD_AS] = true
+			newList[interf.ISD_AS] = struct{}{}
 		}
 	}
 
@@ -107,11 +107,11 @@ func (f *CoreNeighbourScanner) Run(ctx context.Context) {
 		return
 	}
 
-	newList := map[addr.IA]bool{}
+	newList := map[addr.IA]struct{}{}
 
 	for _, interf := range topo.IFInfoMap {
 		if interf.LinkType == proto.LinkType_core {
-			newList[interf.ISD_AS] = true
+			newList[interf.ISD_AS] = struct{}{}
 		}
 	}
 

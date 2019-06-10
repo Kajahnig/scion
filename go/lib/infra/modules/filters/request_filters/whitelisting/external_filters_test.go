@@ -105,7 +105,7 @@ func TestISDFilter_FilterPacket(t *testing.T) {
 
 func TestNeighbourFilter_FilterPacket(t *testing.T) {
 	filter := &NeighbourFilter{
-		Neighbours: map[addr.IA]bool{IAOfExternalISD: true},
+		Neighbours: map[addr.IA]struct{}{IAOfExternalISD: {}},
 	}
 
 	Convey("A Neighbour Filter", t, func() {

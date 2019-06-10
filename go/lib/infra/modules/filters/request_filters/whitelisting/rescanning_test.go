@@ -43,22 +43,22 @@ var (
 	Child121, _ = addr.IAFromString("1-ff00:0:121")
 	Core220, _  = addr.IAFromString("2-ff00:0:220")
 
-	scannedInfraNodes  = map[string]bool{"127.0.0.209": true, "127.0.0.210": true, "127.0.0.211": true, "127.0.0.212": true}
-	scannedInfraNodes1 = map[string]bool{"127.0.0.115": true, "127.0.0.114": true, "127.0.0.113": true, "127.0.0.116": true,
-		"127.0.0.117": true, "127.0.0.118": true}
-	scannedNeighbours      = map[addr.IA]bool{child212: true, child222: true, parent210: true}
-	scannedNeighbours1     = map[addr.IA]bool{Core110: true, Core130: true, Core220: true, child111: true, Child121: true}
-	scannedUpNeighbours    = map[addr.IA]bool{parent210: true}
-	scannedUpNeighbours1   = map[addr.IA]bool{}
-	scannedDownNeighbours  = map[addr.IA]bool{child212: true, child222: true}
-	scannedDownNeighbours1 = map[addr.IA]bool{child111: true, Child121: true}
-	scannedCoreNeighbours  = map[addr.IA]bool{}
-	scannedCoreNeighbours1 = map[addr.IA]bool{Core110: true, Core130: true, Core220: true}
+	scannedInfraNodes  = map[string]struct{}{"127.0.0.209": {}, "127.0.0.210": {}, "127.0.0.211": {}, "127.0.0.212": {}}
+	scannedInfraNodes1 = map[string]struct{}{"127.0.0.115": {}, "127.0.0.114": {}, "127.0.0.113": {}, "127.0.0.116": {},
+		"127.0.0.117": {}, "127.0.0.118": {}}
+	scannedNeighbours      = map[addr.IA]struct{}{child212: {}, child222: {}, parent210: {}}
+	scannedNeighbours1     = map[addr.IA]struct{}{Core110: {}, Core130: {}, Core220: {}, child111: {}, Child121: {}}
+	scannedUpNeighbours    = map[addr.IA]struct{}{parent210: {}}
+	scannedUpNeighbours1   = map[addr.IA]struct{}{}
+	scannedDownNeighbours  = map[addr.IA]struct{}{child212: {}, child222: {}}
+	scannedDownNeighbours1 = map[addr.IA]struct{}{child111: {}, Child121: {}}
+	scannedCoreNeighbours  = map[addr.IA]struct{}{}
+	scannedCoreNeighbours1 = map[addr.IA]struct{}{Core110: {}, Core130: {}, Core220: {}}
 )
 
 func TestInfraNodesScanner_Run(t *testing.T) {
 	filter := &InfraNodesFilter{
-		InfraNodes: map[string]bool{"127.0.0.208": true},
+		InfraNodes: map[string]struct{}{"127.0.0.208": {}},
 	}
 
 	Convey("Scanning the topology should fill the filter map with infra nodes", t, func() {
@@ -73,7 +73,7 @@ func TestInfraNodesScanner_Run(t *testing.T) {
 
 func TestNeighbourScanner_Run(t *testing.T) {
 	filter := &NeighbourFilter{
-		Neighbours: map[addr.IA]bool{otherAS: true},
+		Neighbours: map[addr.IA]struct{}{otherAS: {}},
 	}
 
 	Convey("Scanning the topology should fill the filter map with neighbouring nodes", t, func() {
@@ -88,7 +88,7 @@ func TestNeighbourScanner_Run(t *testing.T) {
 
 func TestUpNeighbourScanner_Run(t *testing.T) {
 	filter := &NeighbourFilter{
-		Neighbours: map[addr.IA]bool{otherAS: true},
+		Neighbours: map[addr.IA]struct{}{otherAS: {}},
 	}
 
 	Convey("Scanning the topology should fill the filter map with upstream neighbouring nodes", t, func() {
@@ -103,7 +103,7 @@ func TestUpNeighbourScanner_Run(t *testing.T) {
 
 func TestDownNeighbourScanner_Run(t *testing.T) {
 	filter := &NeighbourFilter{
-		Neighbours: map[addr.IA]bool{otherAS: true},
+		Neighbours: map[addr.IA]struct{}{otherAS: {}},
 	}
 
 	Convey("Scanning the topology should fill the filter map with downstream neighbouring nodes", t, func() {
@@ -118,7 +118,7 @@ func TestDownNeighbourScanner_Run(t *testing.T) {
 
 func TestCoreNeighbourScanner_Run(t *testing.T) {
 	filter := &NeighbourFilter{
-		Neighbours: map[addr.IA]bool{otherAS: true},
+		Neighbours: map[addr.IA]struct{}{otherAS: {}},
 	}
 
 	Convey("Scanning the topology should fill the filter map with neighbouring core nodes", t, func() {
