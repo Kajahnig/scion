@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	cmd        = "./bin/second_filter_integration_base"
+	cmd        = "./bin/request_filter_integration_base"
 	pathLength = "pathlength1"
 	core       = "seglength_core"
 	noncore    = "seglength_noncore"

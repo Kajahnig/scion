@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	cmd                 = "./bin/filter_integration_base"
+	cmd                 = "./bin/packet_filter_integration_base"
 	configAndResultName = []string{"pathlength_only_internal", "pathlength_only_external",
 		"pathlength_internal_and_max1", "pathlength_internal_and_max2",
 		"pathlength_min1_max1", "pathlength_min1_max2", "pathlength_min2_max2"}

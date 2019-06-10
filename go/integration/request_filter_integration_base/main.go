@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"time"
 
 	"github.com/scionproto/scion/go/lib/common"
 	"github.com/scionproto/scion/go/lib/integration"
@@ -27,13 +26,14 @@ import (
 )
 
 var (
-	name                  = "filter_integration_"
-	cmd                   = "./bin/filter_base"
+	name                  = "second_filter_integration_"
+	cmd                   = "./bin/request_filter_base"
 	attempts              = flag.Int("attempts", 1, "Number of attempts before giving up.")
 	maxNumberOfGoRoutines = flag.Int("goRoutines", 2, "Maximum number of goroutines.")
 	testFileName          = flag.String("filename", "", "Name of the result and config files.")
 	srcASList             = flag.String("srcIAs", "", "Comma separated list of source IAs (clients).")
 	dstASList             = flag.String("dstIAs", "", "Comma separated list of destination IAs (servers).")
+	topoFilePath          = flag.String("topoFilePath", "", "Path to the topology file.")
 )
 
 func main() {
@@ -55,8 +55,8 @@ func realMain() int {
 		"-remote", integration.DstAddrPattern + ":" + integration.ServerPortReplace,
 		"-results", *testFileName}
 	serverArgs := []string{"-log.console", "debug", "-mode", "server",
-		"-local", integration.DstAddrPattern + ":0",
-		"-pfConfig", *testFileName}
+		"-local", integration.DstAddrPattern + ":0", "-results", *testFileName,
+		"-topoFilePath", *topoFilePath}
 	in := integration.NewBinaryIntegration(intTestName, cmd, clientArgs, serverArgs)
 	if err := runTests(in, integration.IAPairs(integration.DispAddr)); err != nil {
 		log.Error("Error during tests: " + err.Error())
@@ -80,7 +80,7 @@ func runTests(in integration.Integration, pairs []integration.IAPair) error {
 			defer s.Close()
 		}
 		// Now start the clients for srcDest pair in parallel
-		timeout := integration.DefaultRunTimeout + integration.CtxTimeout*time.Duration(*attempts)
+		timeout := integration.DefaultRunTimeout + 5*integration.CtxTimeout
 		return integration.RunUnaryTestsWithMoreGoRoutines(in, pairs, timeout, *maxNumberOfGoRoutines)
 	})
 }

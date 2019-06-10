@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	cmd                 = "./bin/second_filter_integration_base"
+	cmd                 = "./bin/request_filter_integration_base"
 	configAndResultName = []string{"whitelist_ISD_N", "whitelist_Core_Down", "whitelist_Up_AS"}
 
 	AS120         = "1-ff00:0:120"

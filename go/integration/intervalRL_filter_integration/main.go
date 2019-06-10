@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	cmd         = "./bin/second_filter_integration_base"
+	cmd         = "./bin/request_filter_integration_base"
 	servers     = "1-ff00:0:111,1-ff00:0:120"
 	AS120       = "1-ff00:0:120"
 	topoPath120 = "./gen/ISD1/ASff00_0_120/br1-ff00_0_120-1/topology.json"
