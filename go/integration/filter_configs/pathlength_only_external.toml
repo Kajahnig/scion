@@ -1,3 +1,0 @@
-#A pathlength filter only allows traffic from outside of the local AS
-[pathlength]
-AllowEmptyPaths = false

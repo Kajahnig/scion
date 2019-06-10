@@ -1,5 +1,0 @@
-#A path length filter with min path length 1 and max 2
-[pathlength]
-AllowEmptyPaths = false
-MinPathLength = 1
-MaxPathLength = 2

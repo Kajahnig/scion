@@ -1,4 +1,0 @@
-#A path length filter that allows traffic from the local AS and its neighbours
-[pathlength]
-AllowEmptyPaths = true
-MaxPathLength = 1

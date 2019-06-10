@@ -1,4 +1,0 @@
-#A path length filter that allows traffic from the local AS and and ASes less than 2 away
-[pathlength]
-AllowEmptyPaths = true
-MaxPathLength = 2
