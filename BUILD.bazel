@@ -44,7 +44,6 @@ pkg_tar(
         "//go/integration/packet_filter_integration_base:packet_filter_integration_base",
         "//go/integration/request_filter_integration_base:request_filter_integration_base",
         "//go/integration/whitelist_filter_integration:whitelist_filter_integration",
-        "//go/integration/pathlength_filter_integration:pathlength_filter_integration",
         "//go/integration/pathlength1_filter_integration:pathlength1_filter_integration",
         "//go/integration/intervalRL_filter_integration:intervalRL_filter_integration",
         "//go/integration/test_server_and_client:test_server_and_client",

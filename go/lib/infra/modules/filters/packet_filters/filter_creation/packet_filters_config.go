@@ -21,33 +21,21 @@ import (
 	"github.com/scionproto/scion/go/lib/common"
 	"github.com/scionproto/scion/go/lib/config"
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/packet_filters/drkey_filter"
-	"github.com/scionproto/scion/go/lib/infra/modules/filters/packet_filters/path_length"
 )
 
 var _ config.Config = (*PacketFilterConfig)(nil)
 
 type PacketFilterConfig struct {
-	Pathlength *path_length.PathLengthConfig
-	Drkey      *drkey_filter.DRKeyConfig
+	Drkey *drkey_filter.DRKeyConfig
 }
 
 func (cfg *PacketFilterConfig) InitDefaults() {
-	if cfg.Pathlength != nil {
-		cfg.Pathlength.InitDefaults()
-	}
 	if cfg.Drkey != nil {
 		cfg.Drkey.InitDefaults()
 	}
 }
 
 func (cfg *PacketFilterConfig) Validate() error {
-	if cfg.Pathlength != nil {
-		err := cfg.Pathlength.Validate()
-		if err != nil {
-			return common.NewBasicError("Unable to validate", err,
-				"type", fmt.Sprintf("%T", cfg.Pathlength))
-		}
-	}
 	if cfg.Drkey != nil {
 		err := cfg.Drkey.Validate()
 		if err != nil {
@@ -64,6 +52,5 @@ func (cfg *PacketFilterConfig) ConfigName() string {
 
 func (cfg *PacketFilterConfig) Sample(dst io.Writer, path config.Path, ctx config.CtxMap) {
 	config.WriteSample(dst, path, ctx,
-		&(path_length.PathLengthConfig{}),
 		&(drkey_filter.DRKeyConfig{}))
 }

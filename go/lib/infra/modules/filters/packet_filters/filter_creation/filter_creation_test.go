@@ -23,32 +23,9 @@ import (
 	. "github.com/smartystreets/goconvey/convey"
 
 	"github.com/scionproto/scion/go/lib/infra/modules/filters/packet_filters/drkey_filter"
-	"github.com/scionproto/scion/go/lib/infra/modules/filters/packet_filters/path_length"
 )
 
 func TestCreateFiltersFromConfig(t *testing.T) {
-	Convey("Creating filters from a config file with an error", t, func() {
-
-		var cfg PacketFilterConfig
-		_, err := toml.DecodeFile("./faulty_test_config.toml", &cfg)
-
-		Convey("Should not return an error when decoding the file", func() {
-			So(err, ShouldBeNil)
-		})
-
-		cfg.InitDefaults()
-
-		filterSlice, err := CreateFiltersFromConfig(cfg)
-
-		Convey("Should return an error when creating the filters", func() {
-			So(err, ShouldNotBeNil)
-		})
-
-		Convey("Should return an empty filter slice", func() {
-			So(filterSlice, ShouldBeNil)
-		})
-	})
-
 	Convey("Creating filters from a config file with all filters", t, func() {
 
 		var cfg PacketFilterConfig
@@ -72,15 +49,13 @@ func TestCreateFiltersFromConfig(t *testing.T) {
 		})
 
 		Convey("Should return a filled filter slice", func() {
-			So(filterSlice, ShouldHaveLength, 2)
+			So(filterSlice, ShouldHaveLength, 1)
 		})
 
 		tests := []struct {
 			typeDescription string
 			filterType      reflect.Type
 		}{
-			{"Path Length Filter",
-				reflect.TypeOf(&path_length.PathLengthFilter{})},
 			{"DRKey Source Auth Filter",
 				reflect.TypeOf(&drkey_filter.DRKeyFilter{})},
 		}
