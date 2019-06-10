@@ -16,6 +16,7 @@ package filter_handler
 
 import (
 	"fmt"
+	"sync/atomic"
 
 	"github.com/scionproto/scion/go/lib/addr"
 	"github.com/scionproto/scion/go/lib/ctrl/ack"
@@ -34,6 +35,8 @@ var (
 	localIA        addr.IA
 	cfg            *FilterHandlerConfig
 	pathToTopoFile string
+	//Request counter for testing purposes
+	Counter uint32
 
 	//WL filters
 	infraFilter     *whitelisting.InfraNodesFilter
@@ -92,6 +95,28 @@ func (h *FilterHandler) Handle(r *infra.Request) *infra.HandlerResult {
 	return h.originalHandler.Handle(r)
 }
 
+//This function is only to be used for testing purposes
+//The counter of the filter handler is increased for every request
+//this was used for performance measurements by periodically writing the counter to a log file
+func (h *FilterHandler) HandleAddr(addr *snet.Addr) {
+	if addr.IA == localIA {
+		for _, f := range h.internalFilters {
+			if result, _ := f.FilterInternal(*addr); result != filters.FilterAccept {
+				atomic.AddUint32(&Counter, 1)
+				return
+			}
+		}
+	} else {
+		for _, f := range h.externalFilters {
+			if result, _ := f.FilterExternal(*addr); result != filters.FilterAccept {
+				atomic.AddUint32(&Counter, 1)
+				return
+			}
+		}
+	}
+	atomic.AddUint32(&Counter, 1)
+}
+
 func sendErrorAck(r *infra.Request, errDesc string) bool {
 	ctx := r.Context()
 	logger := log.FromCtx(ctx)
@@ -146,6 +171,44 @@ func New(messageType infra.MessageType, originalHandler infra.Handler) infra.Han
 	}
 	log.Debug(fmt.Sprintf("No filter handler initialized for message type %v", messageType))
 	return originalHandler
+}
+
+//This function was used for testing purposes
+//Necessary as the FilterHandler as a type needs to be returned in order to access the request counter
+func NewAddrFilterHandler(messageType infra.MessageType) *FilterHandler {
+	iFilters := make([]request_filters.InternalFilter, 0)
+	eFilters := make([]request_filters.ExternalFilter, 0)
+	if rcfg, present := cfg.RequestConfigs[messageType.String()]; present {
+		if rcfg.InternalWL != Nothing {
+			iFilters = append(iFilters, newInternalWLFilter(rcfg.InternalWL))
+		}
+		if rcfg.ExternalWL != Nothing {
+			eFilters = append(eFilters, newExternalWLFilter(rcfg.ExternalWL))
+		}
+		if rcfg.InternalRateLimit != Nothing {
+			iFilters = append(iFilters, newInternalRLFilter(rcfg.InternalRateLimit))
+		}
+		if rcfg.ExternalRateLimit != Nothing {
+			eFilters = append(eFilters, newExternalRLFilter(rcfg.ExternalRateLimit))
+		}
+		if rcfg.CheckInternalForEmptyPath {
+			iFilters = append(iFilters, &path_length.EmptyPathFilter{})
+		}
+		if rcfg.LimitExternalToNeighbours {
+			eFilters = append(eFilters, &path_length.PathLengthOneFilter{})
+		}
+		if rcfg.SegmentFiltering != Nothing {
+			eFilters = append(eFilters,
+				&path_length.SegmentFilter{Isd: localIA.I, IsCore: rcfg.SegmentFiltering == Core})
+		}
+	}
+	log.Debug(fmt.Sprintf("Filter handler for message type %v initialized with %v internal and %v external filters",
+		messageType, len(iFilters), len(eFilters)))
+	return &FilterHandler{
+		internalFilters: iFilters,
+		externalFilters: eFilters,
+		originalHandler: nil,
+	}
 }
 
 func newInternalWLFilter(setting string) request_filters.InternalFilter {

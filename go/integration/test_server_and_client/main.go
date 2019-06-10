@@ -106,22 +106,6 @@ func (s server) run() {
 		fmt.Printf("%s%s\n", libint.ReadySignal, integration.Local.IA)
 	}
 
-	//init the messenger
-	/*msgr := messenger.New(
-		&messenger.Config{
-			IA: integration.Local.IA,
-			Dispatcher: disp.New(
-				transport.NewPacketTransport(conn),
-				messenger.DefaultAdapter,
-				log.Root(),
-			),
-			AddressRewriter: &messenger.AddressRewriter{
-				Router: &snet.BaseRouter{IA: integration.Local.IA},
-			},
-			DisableSignatureVerification: true,
-		},
-	)*/
-
 	cfg := filter_handler.FilterHandlerConfig{}
 	if requestFilterConfig != "" {
 		_, err = toml.DecodeFile(ConfigDir+"/"+requestFilterConfig+".toml", &cfg)
@@ -135,41 +119,13 @@ func (s server) run() {
 		integration.LogFatal("Error initializing the filter handler", "err", err)
 	}
 
-	//add handlers to the messenger
 	handler := filter_handler.NewAddrFilterHandler(infra.TRCRequest)
-	/*msgr.AddHandler(infra.TRCRequest, getHandler(infra.TRCRequest))
-	msgr.AddHandler(infra.ChainRequest, getHandler(infra.ChainRequest))
-	msgr.AddHandler(infra.SegRequest, getHandler(infra.SegRequest))*/
 	log.Debug("Listening", "local", conn.LocalAddr())
 
-	//TODO remove this again
-	/*for i:= 0; i < 10; i ++ {
-		go func() {
-			b := make(common.RawBytes, 1024)
-
-			for {
-				_, _, err := conn.ReadFromSCION(b)
-				if err != nil {
-					log.Error("Error reading packet", "err", err)
-					continue
-				}
-				atomic.AddUint32(&counter, 1)
-				//log.Debug("Received packet", "data", b[:pktLen], "addr", addr)
-			}
-		}()
-	}*/
-
-	//max := 5
-
-	//for i:= 0; i < max; i ++ {
-	f, err := os.OpenFile(pathToLogFile /*"logs/"+strconv.Itoa(i)+"_counters.log"*/, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(pathToLogFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		log.Crit("Error opening file to write counters", "err", err)
 	}
-	//defer f.Close()
-	//_, err = f.WriteString(fmt.Sprintf("Stats from %v with request config '%v', packet config '%v' " +
-	//"and topology file '%v'\n",
-	//time.Now(), requestFilterConfig, integration.PacketFilterConfig, topoFilePath))
 	_, err = f.WriteString(fmt.Sprintf("Stats from counting connection packets at %v using config '%v' and"+
 		" topology '%v'\n", time.Now(), requestFilterConfig, topoFilePath))
 	if err != nil {
@@ -177,26 +133,14 @@ func (s server) run() {
 	}
 
 	f.Close()
-	//}
-	//start periodic task that prints the counter every second
+
 	periodic.StartPeriodicTask(
 		&counterPrinter{counter: &filter_handler.Counter},
 		periodic.NewTicker(time.Second),
 		time.Second)
-	//listen and serve with messenger
-
-	/*go func() {
-		defer log.LogPanicAndExit()
-		msgr.ListenAndServe()
-	}()
-
-	msgr.ListenAndServe()*/
 
 	for i := 0; i < 10; i++ {
-		//index := strconv.Itoa(i)
-		//var count uint32 = 0
 
-		//for j:= 0; j < 10; j++ {
 		go func() {
 			b := make(common.RawBytes, 1024)
 
@@ -209,22 +153,9 @@ func (s server) run() {
 				go func() {
 					handler.HandleAddr(addr)
 				}()
-				//log.Debug("Received packet", "data", b[:pktLen], "addr", addr)
 			}
 		}()
-		//}
-		/*periodic.StartPeriodicTask(
-		&counterPrinter{counter: &count, fileName: pathToLogFile/*"logs/"+index+"_counters.log"},
-		periodic.NewTicker(time.Second),
-		time.Second*/
 	}
-
-	//var count uint32 = 0
-
-	/*periodic.StartPeriodicTask(
-	&counterPrinter{counter: &count, fileName: pathToLogFile/*"logs/"+strconv.Itoa(max)+"_counters.log"},
-	periodic.NewTicker(time.Second),
-	time.Second)*/
 
 	b := make(common.RawBytes, 1024)
 
@@ -234,18 +165,10 @@ func (s server) run() {
 			log.Error("Error reading packet", "err", err)
 			continue
 		}
-		//atomic.AddUint32(&counter,1)
-		//log.Debug(fmt.Sprintf("received packet %v", counter))
 		go func() {
 			handler.HandleAddr(addr)
 		}()
-		//atomic.AddUint32(&counter, 1)
-		//log.Debug("Received packet", "data", b[:pktLen], "addr", addr)
 	}
-}
-
-func getHandler(messageType infra.MessageType) infra.Handler {
-	return filter_handler.New(messageType, &countingHandler{})
 }
 
 var _ infra.Handler = (*countingHandler)(nil)
@@ -255,21 +178,6 @@ type countingHandler struct{}
 func (h *countingHandler) Handle(r *infra.Request) *infra.HandlerResult {
 	atomic.AddUint32(&counter, 1)
 
-	/*ctx := r.Context()
-	logger := log.FromCtx(ctx)
-	rwriter, ok := infra.ResponseWriterFromContext(ctx)
-	if !ok {
-		logger.Error("No response writer found")
-		return infra.MetricsErrInternal
-	}
-	err := rwriter.SendAckReply(ctx, &ack.Ack{
-		Err:     proto.Ack_ErrCode_ok,
-		ErrDesc: "This request passed all filters",
-	})
-	if err != nil {
-		return infra.MetricsErrInternal
-	}*/
-
 	return infra.MetricsResultOk
 }
 
@@ -277,8 +185,6 @@ type counterPrinter struct {
 	counter         *uint32
 	instanceCounter int
 	previousCounter int
-	//fileName 		string
-	//file *os.File
 }
 
 func (c *counterPrinter) Run(ctx context.Context) {
