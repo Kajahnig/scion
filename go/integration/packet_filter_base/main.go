@@ -193,12 +193,8 @@ func parseResultInfo(resultParams []string) (int, int, scmp.Type, error) {
 	case "no":
 		resultType = scmp.Type(100)
 		numOfSuccessfulRequests = 1
-	case "whitelist":
-		resultType = scmp.T_F_NotOnWhitelist
-	case "pathLength":
-		resultType = scmp.T_F_PathLengthNotAccepted
-	case "asRateLimit":
-		resultType = scmp.T_F_ASOrClientRateLimitReached
+	case "drkey":
+		resultType = scmp.T_F_NoDRKeyAuthentication
 	default:
 		err = common.NewBasicError("No matching result type found",
 			nil, "input", resultParams[0])

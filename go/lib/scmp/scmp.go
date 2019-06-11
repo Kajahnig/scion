@@ -125,10 +125,7 @@ const (
 
 // C_Filtering types
 const (
-	T_F_NotOnWhitelist Type = iota
-	T_F_PathLengthNotAccepted
-	T_F_ASOrClientRateLimitReached
-	T_F_NoDRKeyAuthentication
+	T_F_NoDRKeyAuthentication Type = iota
 )
 
 var typeNameMap = map[Class][]string{
@@ -141,10 +138,9 @@ var typeNameMap = map[Class][]string{
 		"NON_ROUTING_HOPF", "DELIVERY_NON_LOCAL", "BAD_SEGMENT",
 		"BAD_INFO_FIELD", "BAD_HOP_FIELD",
 	},
-	C_Ext:   {"TOO_MANY_HOPBYHOP", "BAD_EXT_ORDER", "BAD_HOPBYHOP", "BAD_END2END"},
-	C_Sibra: {"BAD_VERSION", "SETUP_NO_REQ"},
-	C_Filtering: {"NOT_ON_WHITELIST", "PATH_LENGTH_NOT_ACCEPTED", "AS_OR_CLIENT_RATE_LIMIT_REACHED",
-		"HISTORY_RATE_LIMIT_REACHED", "DUPLICATE_SUPPRESSION", "NO_DRKEY_AUTHENTICATION"},
+	C_Ext:       {"TOO_MANY_HOPBYHOP", "BAD_EXT_ORDER", "BAD_HOPBYHOP", "BAD_END2END"},
+	C_Sibra:     {"BAD_VERSION", "SETUP_NO_REQ"},
+	C_Filtering: {"NO_DRKEY_AUTHENTICATION"},
 }
 
 func (t Type) Name(c Class) string {
